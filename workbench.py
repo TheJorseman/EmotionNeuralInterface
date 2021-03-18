@@ -21,6 +21,8 @@ import os
 from random import shuffle, sample, seed
 import yaml
 
+from datetime import datetime
+
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
@@ -45,9 +47,8 @@ class Workbench(object):
         self.load_tokenizer()
         self.dataset_subjects()
         self.datagen_config()
-        self.set_folders()
-
-
+        self.load_dataset_batch()
+    
     def load_dataset(self):
         experiments_paths = get_paths_experiment(self.data["dataset"]["dataset_path"])
         experiments = {}
@@ -60,7 +61,7 @@ class Workbench(object):
         self.tokenizer = Tokenizer(self.subjects, window_size=data["window_size"], stride=data["stride"])
 
     def dataset_subjects(self):
-        data = data["dataset_subjects"]
+        data = self.data["dataset_subjects"]
         self.train_subjets, other_subjets = split_data_by_len(self.subjects,data["train_subjects"])
         self.validation_subjets, self.test_subjets = split_data_by_len(other_subjets,data["test_subjects"])
     
@@ -110,8 +111,8 @@ class Workbench(object):
         train_data_generator = DataGen(self.train_subjets, self.tokenizer, combinate_subjects=self.combinate_subjects, channels_iter=self.channel_iters, targets_cod=self.target_cod)
         self.data_train = train_data_generator.get_tiny_custom_channel_dataset(self.data["datagen_config"]["train_dataset_len"])
         self.training_set = NetworkDataSet(self.data_train, self.tokenizer)
-        self.validation_loader = NetworkDataSet(self.data_train, self.tokenizer)
-        self.validation_loader = NetworkDataSet(self.data_train, self.tokenizer)
+        self.validation_set = NetworkDataSet(self.data_train, self.tokenizer)
+        self.testing_set = NetworkDataSet(self.data_train, self.tokenizer)
 
 
     def load_dataset_batch(self):
@@ -135,7 +136,6 @@ class Workbench(object):
                             'shuffle': True,
                             'num_workers': 0
                         }
-    
         self.training_loader = DataLoader(self.training_set, **train_params)
         self.validation_loader = DataLoader(self.validation_set, **validation_params)
         self.testing_loader = DataLoader(self.testing_set, **test_params)
@@ -165,12 +165,17 @@ class Workbench(object):
         n_correct = (o_labels==targets).sum().item()
         return n_correct
     
-    def set_folders(self):
+    def set_folders(self, exp_name):
         if not os.path.exists(self.data["model"]["folder_save"]):
             os.mkdir(self.data["model"]["folder_save"])
-        if not os.path.exists(self.data["plots"]["folder"]):
-            os.mkdir(self.data["plots"]["folder"])
-
+        base = self.data["model"]["folder_save"]
+        self.base_path = os.path.join(base,exp_name)
+        if not os.path.exists(self.base_path ):
+            os.mkdir(self.base_path )      
+        self.plot_path = os.path.join(base,exp_name,"plots")
+        if not os.path.exists(self.plot_path):
+            os.mkdir(self.plot_path)
+        
 
     def evaluate_model(self, epoch):
         n = 1
@@ -218,11 +223,11 @@ class Workbench(object):
 
     def train(self):
         self.model_name = self.get_model_name()
-        self.folder = self.data["model"]["folder_save"]
+        self.folder = self.base_path
         self.ext = self.data["model"]["extention"]
         full_path = os.path.join(self.folder, self.model_name + self.ext)        
         self.model = self.get_model()
-        self.model.to(device)
+        self.model.to(self.device)
         self.margin = self.data["loss"]["margin"]
         self.loss_function = ContrastiveLoss(self.margin)
         self.optimizer = self.get_optimizer(self.model)
@@ -236,7 +241,7 @@ class Workbench(object):
                 torch.save(self.model, "{}/{}-epoch-{}.{}".format(self.folder, self.model_name, epoch, self.ext))
                 print("Model Saved Successfully")
             if self.data["validation"]["use_each"] == "epoch":
-                self.evaluate_model()
+                self.evaluate_model(epoch)
         torch.save(self.model, full_path)
 
 
@@ -272,9 +277,13 @@ class Workbench(object):
         Y_V = np.array(y_real)
         confusion_matrix = crosstab(Y_P, Y_V, rownames=['Real'], colnames=['Predicción'])
         class_report = classification_report(Y_V, Y_P)
+        folder = self.plot_path
+        report = open(os.path.join(folder,"report","w"))
+        report.write(class_report)
+        report.close()
         m = TSNE(n_components=3,learning_rate=50)
         tsne_features = m.fit_transform(np.array(df.Vector.tolist()))
-        folder = self.data["plots"]["folder"]
+        
         df["x"] = tsne_features[:,0]
         df["y"] = tsne_features[:,1]
         df["z"] = tsne_features[:,2]
@@ -313,12 +322,27 @@ class Workbench(object):
         fig_2d.write_image(os.path.join(folder,"category2d.png"))
         fig.write_image(os.path.join(folder,"category3d.png"))
 
+    def save_yaml_conf(self):
+        path = os.path.join(self.base_path, 'data.yml') 
+        with open(path, 'w') as outfile:
+            yaml.dump(self.data, outfile, default_flow_style=False)
+        return
+
     def run(self):
+        branch = "emotion_neural_interface_{}_dev-{}_{}".format(self.get_model_name(),self.data["github"]["dev"], datetime.now().timestamp())
+        self.data["branch"] = branch
+        self.set_folders(branch)
+        command = "git checkout -b {}".format(branch)
+        os.system(command)
         self.train()
         self.model.eval()
         y_real, y_predict, y_distance, df =self.test()
+        import pdb;pdb.set_trace()
         self.gen_model_reports(y_real, y_predict, y_distance, df)
+        self.save_yaml_conf()
+        os.system("git add .")
+        os.system("git commit -m 'Se agrega el experimento'")
+        os.system("git checkout main")
 
-
-
-Workbench("config.yaml")
+exp = Workbench("config.yaml")
+exp.run()

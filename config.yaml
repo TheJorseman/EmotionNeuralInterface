@@ -23,9 +23,9 @@ dataset_batch:
   train_batch_size: 4
   validation_batch_size: 2
   test_batch_size: 1
-  learning_rate: 1e-04
+  learning_rate: 0.0001
 model:
-  folder_save: "models/tiny"
+  folder_save: "models"
   extention: ".pt"
   fully_conected: False
 loss:
@@ -39,13 +39,13 @@ train:
   save_each: "epoch"
   #save_each: "100-iter"
 validation:
-  use_each: "epoch"
+  use_each: ""
   #use_each: "10000-iter"
 test:
   use_test: True
   dataset_train: False
-plots:
-  folder: "models/tiny/plots"
+github:
+  dev: "thejorseman"
 
 
 

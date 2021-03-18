@@ -57,19 +57,20 @@ class DataGen(object):
     dataset_neg = []
     len_channels = int((samples/(len(self.subjects)*self.len_data))/2)
     #len_channels = 14 if len_channels>14 else len_channels
-    #import pdb;pdb.set_trace()
+    len_channels = 3
     for subject in self.subjects:
       for data_idx in range(3):
         same_channels = sample(self.channels,len_channels)
-        #not_same_channels = sample(set(self.channels).difference(set(same_channels)),len_channels)
-        #not_same_channels = sample(list(combinations(not_same_channels,2)), len_channels)
         not_same_channels = sample(list(combinations(same_channels,2)),len_channels)
         for i in range(len_channels):
-          idx_data1, idx_data2 = self.get_data_from_subjets(subject, data_idx, same_channels[i], same_channels[i])
-          dataset_pos.append({"input1": choice(idx_data1), "input2": choice(idx_data2), "output": self.targets_cod["positive"], "chn1" : self.channels.index(same_channels[i]), "chn2" : self.channels.index(same_channels[i]), "subject1" : subject.id, "subject2" : subject.id, "estimulo": data_idx})
+          idx_data1, _= self.get_data_from_subjets(subject, data_idx, same_channels[i], same_channels[i])
+          for inx in range(len(idx_data1)-1):
+            dataset_pos.append({"input1": idx_data1[inx], "input2": idx_data1[inx+1], "output": self.targets_cod["positive"], "chn1" : self.channels.index(same_channels[i]), "chn2" : self.channels.index(same_channels[i]), "subject1" : subject.id, "subject2" : subject.id, "estimulo": data_idx})
           idx_data3, idx_data4 = self.get_data_from_subjets(subject, data_idx, not_same_channels[i][0], not_same_channels[i][1])
-          dataset_pos.append({"input1": choice(idx_data3), "input2": choice(idx_data4), "output": self.targets_cod["negative"], "chn1" : self.channels.index(not_same_channels[i][0]), "chn2" : self.channels.index(not_same_channels[i][1]), "subject1" : subject.id, "subject2" : subject.id, "estimulo": data_idx})
-    return dataset_pos + dataset_pos
+          data_len = min([len(idx_data3), len(idx_data4)])
+          for inx in range(data_len):
+            dataset_neg.append({"input1": choice(idx_data3), "input2": choice(idx_data4), "output": self.targets_cod["negative"], "chn1" : self.channels.index(not_same_channels[i][0]), "chn2" : self.channels.index(not_same_channels[i][1]), "subject1" : subject.id, "subject2" : subject.id, "estimulo": data_idx})
+    return dataset_pos + dataset_neg
     
   """
   Consecutive Dataset
