@@ -1,0 +1,52 @@
+dataset:
+  dataset_path: "C:/Users/migue/Documents/GitHub/Datasets/Experimento"
+tokenizer:
+  window_size: 1024
+  stride: 512
+dataset_subjects:
+  train_subjects: 14
+  test_subjects: 3
+  validation_subjects: 3
+datagen_config:
+  combinate_subjects: True
+  channel_iters: 300
+  target_codification:
+    positive: 1
+    negative: 0
+  dataset: "same_channel"
+  #dataset: "same_subject"
+  #dataset: "consecutive"
+  use_overfitting: True
+  subjects_overfitting: 2
+  train_dataset_len: 50
+dataset_batch:
+  train_batch_size: 4
+  validation_batch_size: 2
+  test_batch_size: 1
+  learning_rate: 1e-04
+model:
+  folder_save: "models/tiny"
+  extention: ".pt"
+  fully_conected: False
+loss:
+  loss_fuction: "1"
+  margin: 0.6
+optimizer: "adam"
+train:
+  load_model: False
+  load_model_name: ""
+  epochs: 1000
+  save_each: "epoch"
+  #save_each: "100-iter"
+validation:
+  use_each: "epoch"
+  #use_each: "10000-iter"
+test:
+  use_test: True
+  dataset_train: False
+plots:
+  folder: "models/tiny/plots"
+
+
+
+
