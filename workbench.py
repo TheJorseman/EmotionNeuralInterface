@@ -109,10 +109,11 @@ class Workbench(object):
 
     def datagen_overfitting(self):
         train_data_generator = DataGen(self.train_subjets, self.tokenizer, combinate_subjects=self.combinate_subjects, channels_iter=self.channel_iters, targets_cod=self.target_cod)
-        self.data_train = train_data_generator.get_tiny_custom_channel_dataset(self.data["datagen_config"]["train_dataset_len"])
+        self.data_train = train_data_generator.get_tiny_custom_channel_dataset_test(self.data["datagen_config"]["train_dataset_len"])
+        self.data_test = train_data_generator.get_tiny_custom_channel_dataset_test(self.data["datagen_config"]["train_dataset_len"])
         self.training_set = NetworkDataSet(self.data_train, self.tokenizer)
         self.validation_set = NetworkDataSet(self.data_train, self.tokenizer)
-        self.testing_set = NetworkDataSet(self.data_train, self.tokenizer)
+        self.testing_set = NetworkDataSet(self.data_test, self.tokenizer)
 
 
     def load_dataset_batch(self):
@@ -221,16 +222,19 @@ class Workbench(object):
             n += 1
         return
 
-    def train(self):
+    def prepare_model(self):
         self.model_name = self.get_model_name()
         self.folder = self.base_path
         self.ext = self.data["model"]["extention"]
-        full_path = os.path.join(self.folder, self.model_name + self.ext)        
+        self.full_path = os.path.join(self.folder, self.model_name + self.ext)        
         self.model = self.get_model()
         self.model.to(self.device)
         self.margin = self.data["loss"]["margin"]
         self.loss_function = ContrastiveLoss(self.margin)
         self.optimizer = self.get_optimizer(self.model)
+
+    def train(self):
+        self.prepare_model()
         torch.set_grad_enabled(True)
         self.EPOCHS=self.data["train"]["epochs"]
         self.model.train()
@@ -242,7 +246,7 @@ class Workbench(object):
                 print("Model Saved Successfully")
             if self.data["validation"]["use_each"] == "epoch":
                 self.evaluate_model(epoch)
-        torch.save(self.model, full_path)
+        torch.save(self.model, self.full_path)
 
 
     def test(self):
@@ -252,8 +256,8 @@ class Workbench(object):
         n_correct = 0
         examples = 0
         df = list()
-        datalen = len(training_set)
-        i = 0
+        datalen = len(self.training_set)
+        i = 1
         for _,data in enumerate(self.testing_loader, 0):
             input1 = data["input1"].to(self.device)
             input2 = data["input2"].to(self.device)
@@ -262,7 +266,7 @@ class Workbench(object):
             loss_contrastive = self.loss_function(output1, output2, targets.unsqueeze(1))
             eucledian_distance = F.pairwise_distance(output1, output2)
             y_real += [target.item() for target in targets]
-            y_predict += [target_cod["positive"] if tensor.item() < self.margin else self.target_cod["negative"] for tensor in eucledian_distance]
+            y_predict += [self.target_cod["positive"] if tensor.item() < self.margin else self.target_cod["negative"] for tensor in eucledian_distance]
             n_correct += self.calcuate_metric(eucledian_distance, targets)
             examples += targets.size(0)
             print("Acc= ", n_correct/examples)
@@ -278,7 +282,7 @@ class Workbench(object):
         confusion_matrix = crosstab(Y_P, Y_V, rownames=['Real'], colnames=['Predicción'])
         class_report = classification_report(Y_V, Y_P)
         folder = self.plot_path
-        report = open(os.path.join(folder,"report","w"))
+        report = open(os.path.join(folder,"report.txt"),"w")
         report.write(class_report)
         report.close()
         m = TSNE(n_components=3,learning_rate=50)
@@ -297,9 +301,9 @@ class Workbench(object):
         return os.path.join(folder,"{}{}.png".format(base,extra))
 
     def plot(self, folder, df, hue_data, data, basename):
-        sns.scatterplot(x="x",y="y", hue=hue_data, data=df).savefig(self.get_plot_name(basename,""))
-        px.scatter_3d(df, x='x', y='y', z='z', color=data).write_image(self.get_plot_name(basename,"3d"))
-        px.scatter(df, x='x', y='y',color=data).write_image(self.get_plot_name(basename,"2d"))
+        sns.scatterplot(x="x",y="y", hue=hue_data, data=df).figure.savefig(self.get_plot_name(folder,basename,""))
+        px.scatter_3d(df, x='x', y='y', z='z', color=data).write_image(self.get_plot_name(folder,basename,"3d"))
+        px.scatter(df, x='x', y='y',color=data).write_image(self.get_plot_name(folder,basename,"2d"))
 
     def plot_channels(self, folder, df):
         sns.scatterplot(x="x",y="y", hue="chn", data=df).savefig(os.path.join(folder,"channel.png"))
@@ -337,12 +341,27 @@ class Workbench(object):
         self.train()
         self.model.eval()
         y_real, y_predict, y_distance, df =self.test()
-        import pdb;pdb.set_trace()
         self.gen_model_reports(y_real, y_predict, y_distance, df)
         self.save_yaml_conf()
         os.system("git add .")
         os.system("git commit -m 'Se agrega el experimento'")
         os.system("git checkout main")
 
+    def run_test(self):
+        branch = "emotion_neural_interface_{}_dev-{}_{}".format(self.get_model_name(),self.data["github"]["dev"], datetime.now().timestamp())
+        self.data["branch"] = branch
+        self.set_folders(branch)
+        command = "git checkout -b {}".format(branch)
+        os.system(command)
+        self.prepare_model()
+        self.model.eval()
+        y_real, y_predict, y_distance, df =self.test()
+        self.gen_model_reports(y_real, y_predict, y_distance, df)
+        self.save_yaml_conf()
+        os.system("git add .")
+        os.system('git commit -m "Se agrega el experimento"')
+        os.system("git checkout main")    
+        return
+    
 exp = Workbench("config.yaml")
 exp.run()
