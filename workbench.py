@@ -33,6 +33,7 @@ from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
+from umap import UMAP
 
 seed(27)
 
@@ -285,17 +286,44 @@ class Workbench(object):
         report = open(os.path.join(folder,"report.txt"),"w")
         report.write(class_report)
         report.close()
+        # TSNE
+        self.plot_tsne(df)
+        #UMAP
+        self.plot_umap(df)
+        self.save_test_data(df)
+        return
+    
+    def save_test_data(self,df):
+        path = os.path.join(self.base_path, 'data_test.csv') 
+        return df.to_csv(path)
+
+    def plot_umap(self, df):
+        folder = self.plot_path
+        umap_2d = UMAP(n_components=2, init='random', random_state=0)
+        umap_3d = UMAP(n_components=3, init='random', random_state=0)
+        proj_2d = umap_2d.fit_transform(np.array(df.Vector.tolist()))
+        proj_3d = umap_3d.fit_transform(np.array(df.Vector.tolist()))
+        self.plot_umap(folder,proj_2d,proj_3d,df.Categ,"Categ","category-umap")
+        self.plot_umap(folder,proj_2d,proj_3d,df.subject,"subject","subject-umap")
+        self.plot_umap(folder,proj_2d,proj_3d,df.chn,"chn","channel-umap")
+        self.plot_umap(folder,proj_2d,proj_3d,df.estimulo,"estimulo","estimulo-umap")
+
+    def plot_umap(self, folder, proj_2d, proj_3d, data, label, basename):
+        fig_2d = px.scatter(proj_2d, x=0, y=1, color=data, labels={'color': label}).write_image(self.get_plot_name(folder,basename,"2d"))
+        fig_3d = px.scatter_3d(proj_3d, x=0, y=1, z=2,color=data, labels={'color': label}).write_image(self.get_plot_name(folder,basename,"3d"))
+        return 
+
+    def plot_tsne(self, df):
+        folder = self.plot_path
         m = TSNE(n_components=3,learning_rate=50)
         tsne_features = m.fit_transform(np.array(df.Vector.tolist()))
-        
         df["x"] = tsne_features[:,0]
         df["y"] = tsne_features[:,1]
         df["z"] = tsne_features[:,2]
-        self.plot(folder, df, "Categ", df.Categ, "category")
-        self.plot(folder, df, "subject", df.subject, "subject")
-        self.plot(folder, df, "chn", df.chn, "channel")
-        self.plot(folder, df, "estimulo", df.estimulo, "estimulo")
-        return
+        self.plot(folder, df, "Categ", df.Categ, "category-tsne")
+        self.plot(folder, df, "subject", df.subject, "subject-tsne")
+        self.plot(folder, df, "chn", df.chn, "channel-tsne")
+        self.plot(folder, df, "estimulo", df.estimulo, "estimulo-tsne")
 
     def get_plot_name(self, folder, base, extra):
         return os.path.join(folder,"{}{}.png".format(base,extra))
@@ -327,7 +355,7 @@ class Workbench(object):
         fig.write_image(os.path.join(folder,"category3d.png"))
 
     def save_yaml_conf(self):
-        path = os.path.join(self.base_path, 'data.yml') 
+        path = os.path.join(self.base_path, 'data.yaml') 
         with open(path, 'w') as outfile:
             yaml.dump(self.data, outfile, default_flow_style=False)
         return
