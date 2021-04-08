@@ -1,7 +1,20 @@
 import numpy as np
 
 class Tokenizer(object):
+  """
+  Esta clase sirve para "tokenizar" las series de tiempo, las convierte a ids y estos ids sirven para generar los datos y cuando se procesen
+  obtener los datos.
+  """  
   def __init__(self, subjects, window_size=128 ,channels="all", pad_array=False, stride=128):
+    """
+    Constructor.
+    Args:
+        subjects (Subjects): lista con todos los sujetos.
+        window_size (int, optional): El tamaño de la ventana en la que se quiere dividir. Defaults to 128.
+        channels (str, optional): Canales con los que se quiere trabajar. Defaults to "all".
+        pad_array (bool, optional): Sirve para que . Defaults to False.
+        stride (int, optional): Desplazamiento sobre la señal cuando se "tokeniza". Defaults to 128.
+    """    
     self.subjects = subjects
     self.window_size = window_size
     self.stride = stride
@@ -16,6 +29,9 @@ class Tokenizer(object):
     self.stride_dataset()
 
   def stride_dataset(self):
+    """
+    Genera el split de la señal.
+    """    
     for subject in self.subjects:
       for data_ix in range(len(subject.get_clean_data())):
         data = subject.get_clean_data()
@@ -28,6 +44,17 @@ class Tokenizer(object):
     return
 
   def split_data(self, kernel, stride, data):
+    """
+    Corta la señal en pedazos y les asigna un id.
+
+    Args:
+        kernel (int): Window Size
+        stride (int): Desplazamiento
+        data (array): Array que se quiere dividir.
+
+    Returns:
+        list: Array dividido
+    """    
     n = int((len(data)-kernel)/stride) + 1
     data_tok = []
     for i in range(n):
@@ -36,6 +63,9 @@ class Tokenizer(object):
 
 
   def convert_to_ids(self):
+    """
+    Realiza todo el proceso de split
+    """    
     for subject in self.subjects:
       for data_ix in range(len(subject.get_clean_data())):
         data = subject.get_clean_data()

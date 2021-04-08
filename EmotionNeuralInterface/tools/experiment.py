@@ -2,11 +2,16 @@ import os
 from .data_parse import Data
 
 class Experiment(object):
+  """
+  Esta clase define el experimento que se divide en Placentero/Neutro/Displacentero
+  Agrupa los CSV.
+  """  
   def __init__(self,name,paths):
     self.name = name
     self.data_paths = paths
     self._data = []
     self.__initialize_data()
+
   def __initialize_data(self):
     for data_path in self.data_paths:
       filename = os.path.basename(data_path)

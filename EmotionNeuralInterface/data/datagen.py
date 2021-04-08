@@ -5,10 +5,27 @@ from math import ceil
 seed(27)
 
 class DataGen(object):
+  """
+  Esta clase sirve para generar los datos de entrenamiento/prueba o validación. 
+  """  
   def __init__(self,subjects, tokenizer, 
                     channels="all", combinate_subjects=False, combine_data=False, 
                     balance_dataset=True, data_chn_sampling=-1, channels_iter=3000,
                     targets_cod = {"positive": 1, "negative":0}):
+    """
+    Constructor
+
+    Args:
+        subjects (Subjects): Sujetos con los que se van a generar los datos
+        tokenizer (Tokenizer): Clase donde se almacenan los ids de los segmentos que se obtienen de la señal.
+        channels (str, optional): Canales con los que se quiere trabajar. Defaults to "all".
+        combinate_subjects (bool, optional): Sirve para que en la generación de los datos se puedan combinar los sujetos. Defaults to False.
+        combine_data (bool, optional): Sirve para combinar segmentos de distintos estimulos. Defaults to False.
+        balance_dataset (bool, optional): Balancea el dataset. Defaults to True.
+        data_chn_sampling (int, optional): Define cuantos canales se pueden elegir para hacer un sampling y no generar con todos los canales. Defaults to -1.
+        channels_iter (int, optional): Cuantas iteraciones de canales random se pueden generar. Defaults to 3000.
+        targets_cod (dict, optional): Codificación de los que son similares a los que no. Defaults to {"positive": 1, "negative":0}.
+    """    
                     
     self.subjects = subjects
     self.tokenizer = tokenizer
@@ -57,6 +74,15 @@ class DataGen(object):
 
 
   def get_tiny_custom_channel_dataset(self, samples):
+    """
+    Este método define la creación de un dataset pequeño para hacer overfitting y saber si la red esta aprendiendo o que pasa.
+
+    Args:
+        samples (int): Número de datos que se quiere extraer (por ahora se cambio)
+
+    Returns:
+        list: Dataset
+    """    
     dataset_pos = []
     dataset_neg = []
     len_channels = int((samples/(len(self.subjects)*self.len_data))/2)
@@ -78,6 +104,15 @@ class DataGen(object):
 
 
   def get_tiny_custom_channel_dataset_test(self, samples):
+    """
+    Este método define la creación de un dataset pequeño para hacer overfitting y saber si la red esta aprendiendo o que pasa.
+    Esta es otra versión con algunas mejoras. Itera sobre cada sujeto/tipo de dato/canal y extrae datos del mismo canal.
+    Args:
+        samples (int): Número de datos que se quiere extraer (por ahora se cambio)
+
+    Returns:
+        list: Dataset
+    """    
     dataset_pos = []
     dataset_neg = []
     len_channels = int((samples/(len(self.subjects)*self.len_data))/2)
@@ -111,11 +146,23 @@ class DataGen(object):
       for data_ix in range(self.len_data):
         for channel in self.channels:
           index_splited_data = subject.get_indexs(data_ix, channel)
-          consecutive_dataset += self.__consecutive_permutation_data__(index_splited_data, subject, channel)
+          consecutive_dataset += self.__consecutive_permutation_data__(index_splited_data, subject, channel, data_ix)
     self.consecutive_dataset = consecutive_dataset
     self.dataset_metadata["consecutive"]["len"] = len(self.consecutive_dataset) 
 
-  def __consecutive_permutation_data__(self, idx_data, subject, channel):
+  def __consecutive_permutation_data__(self, idx_data, subject, channel, data_idx):
+    """
+    Almacena en un diccionario los valores de una permutación de dos listas de datos.
+    Junto con la categoria a la que corresponden y otra información.
+    Esto es para el dataset de tipo consecutivo.
+    Args:
+        idx_data (dato): Lista con los indices de los segmentos.
+        subject (Subject): Sujeto al que pertenecen los datos.
+        channel (str): Canal de los datos. 
+        data_idx (int): Tipo de estimulo al que pertenece.
+    Returns:
+        list: Dataset
+    """    
     cons_data_pos = []
     cons_data_neg = []
     perm_index = list(permutations(idx_data, 2)) 
@@ -123,10 +170,10 @@ class DataGen(object):
       max_indx = max(perm_index[i])
       if perm_index[i][1] - 1 == perm_index[i][0]:
         # Si es consecuente
-        cons_data_pos.append({"input1": perm_index[i][0], "input2": perm_index[i][1], "output": self.targets_cod["positive"], "chn1" : channel, "chn2" : channel, "subject1" : subject.id, "subject2" : subject.id})
+        cons_data_pos.append({"input1": perm_index[i][0], "input2": perm_index[i][1], "output": self.targets_cod["positive"], "chn1" : channel, "chn2" : channel, "subject1" : subject.id, "subject2" : subject.id, "estimulo": data_idx})
       else:
         # No es consecuente
-        cons_data_neg.append({"input1": perm_index[i][0], "input2": perm_index[i][1], "output": self.targets_cod["negative"] , "chn1" : channel, "chn2" : channel, "subject1" : subject.id, "subject2" : subject.id})
+        cons_data_neg.append({"input1": perm_index[i][0], "input2": perm_index[i][1], "output": self.targets_cod["negative"] , "chn1" : channel, "chn2" : channel, "subject1" : subject.id, "subject2" : subject.id, "estimulo": data_idx})
     if self.balance_dataset:
       cons_data_pos, cons_data_neg = self.get_balanced_dataset(cons_data_pos, cons_data_neg)
     self.dataset_metadata["consecutive"]["positive_count"] += len(cons_data_pos)
@@ -134,6 +181,16 @@ class DataGen(object):
     return cons_data_pos + cons_data_neg
 
   def get_balanced_dataset(self, data1, data2):
+    """
+    Balancea el dataset
+
+    Args:
+        data1 (list): Dataset 1 
+        data2 (list): Dataset 2 
+
+    Returns:
+        list: Dataset balanceado
+    """    
     if len(data1)>len(data2):
       data1_new = sample(data1,len(data2))
       return data1_new, data2
@@ -142,7 +199,10 @@ class DataGen(object):
       return data1, data2_new
     return  data1, data2
 
-  def __set_same_channel__(self):  
+  def __set_same_channel__(self):
+    """
+    Establece el dataset decidiendo si pertenece al mismo canal o no.
+    """      
     dataset_pos = []
     dataset_neg = []    
     key = "same_channel"
@@ -154,7 +214,7 @@ class DataGen(object):
           chn1 = choice(self.channels)
           chn2 = choice(self.channels)
           idx_data1, idx_data2 = self.get_data_from_subjets(subject, data_idx, chn1, chn2)
-          pos, neg = self.set_data_from_same_process(idx_data1, idx_data2, chn1, chn2, subject, key, extra_data=self.get_extra_data(subject, chn1, chn2))
+          pos, neg = self.set_data_from_same_process(idx_data1, idx_data2, chn1, chn2, subject, key, extra_data=self.get_extra_data(subject, chn1, chn2, data_idx))
           dataset_pos += pos
           dataset_neg += neg
     if self.balance_dataset:
@@ -166,15 +226,41 @@ class DataGen(object):
     return
 
 
-  def get_extra_data(self, subject, chn1, chn2):
+  def get_extra_data(self, subject, chn1, chn2, data_idx):
+    """
+    Agrega al dataset información extra como el sujeto o los canales a los que pertenecen los datos.
+    Args:
+        subject (Subject): Sujeto
+        chn1 (str): Canal 1
+        chn2 (str): Canal 2
+        data_idx (int): Tipo de estimulo
+
+    Returns:
+        dict: diccionario actualizado
+    """    
     extra_data = {"chn1": self.channels.index(chn1), "chn2": self.channels.index(chn2)}
     if self.combinate_subjects:
-      extra_data.update({"subject1": subject[0].id, "subject2":subject[1].id})
+      extra_data.update({"subject1": subject[0].id, "subject2":subject[1].id, "estimulo": data_idx})
     else:
-      extra_data.update({"subject1": subject.id, "subject2":subject.id})
+      extra_data.update({"subject1": subject.id, "subject2":subject.id, "estimulo": data_idx})
     return extra_data
 
   def set_data_from_same_process(self, data1, data2, var1, var2, subjects, key, extra_data={}):
+    """
+    Establece a partir de dos tipos de datos si se trata del mismo proceso (Si es el mismo canal o mismo sujeto)
+
+    Args:
+        data1 (list): Data 1 
+        data2 (list): Data 2
+        var1 (obj): Variable a evaluar 1 
+        var2 (obj): Variable a evaluar 2 
+        subjects (object): Sujetos o sujeto
+        key ([type]): No se para que esta esto jajajaa
+        extra_data (dict, optional): Datos extra a poner en el dataset. Defaults to {}.
+
+    Returns:
+        tuple: Tupla con los dos datasets (positivo y negativo)
+    """    
     positive = []
     negative = []
     if self.data_chn_sampling == -1:
@@ -192,6 +278,18 @@ class DataGen(object):
     return positive,negative
 
   def get_data_from_subjets(self, subject, data_ix, chn1, chn2):
+    """
+    Esta función sirve principalmente para extraer los datos por ejemplo, cuando se trata de iterar sobre un sujeto o combinar 
+    Los sujetos para extraer la información de distintos sujetos.
+    Args:
+        subject (obj): Si el objeto es una tupla entonces extrae información de cada sujeto de tipo Subject de otro modo es un objeto de tipo subject
+        data_ix (int): tipo de dato
+        chn1 (str): Canal 1
+        chn2 (str): Canal 2
+
+    Returns:
+        tuple: Tupla con los datos
+    """    
     if type(subject) == type(tuple()):
       idx_data1 = subject[0].get_indexs(data_ix, chn1)
       idx_data2 = subject[1].get_indexs(data_ix, chn2)
@@ -200,13 +298,10 @@ class DataGen(object):
       idx_data2 = subject.get_indexs(data_ix, chn2)
     return idx_data1, idx_data2
 
-  """
-    # Visualizar por canal
-    # Visualizar por sujeto
-    # Aumentar el tamaño de la ventana
-  """
-
   def __set_same_subject__(self):
+    """
+    Crea el dataset con la condición si es el mismo sujeto o no.
+    """    
     dataset_pos = []
     dataset_neg = []     
     key = "same_subject"
@@ -218,7 +313,7 @@ class DataGen(object):
           chn1 = choice(self.channels)
           chn2 = choice(self.channels)
           idx_data1, idx_data2 = self.get_data_from_subjets(subject, data_idx, chn1, chn2)
-          pos, neg = self.set_data_from_same_process(idx_data1, idx_data2, subject[0].id, subject[1].id, subject, key)
+          pos, neg = self.set_data_from_same_process(idx_data1, idx_data2, subject[0].id, subject[1].id, subject, key, extra_data=self.get_extra_data(subject, chn1, chn2, data_idx))
           dataset_pos += pos
           dataset_neg += neg
     if self.balance_dataset:
@@ -230,6 +325,12 @@ class DataGen(object):
 
 
   def get_subjects_combinations(self):
+    """
+    Extrae combinaciones de los sujetos
+
+    Returns:
+        list: Lista con la combinación de los mismos sujetos y de diferentes.
+    """    
     subject_dataset = []
     subjects_comb = list(combinations_with_replacement(self.subjects,2))
     same_subjects = [sub_pair for sub_pair in subjects_comb if sub_pair[0].id == sub_pair[1].id]

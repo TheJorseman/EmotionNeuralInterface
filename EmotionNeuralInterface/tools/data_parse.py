@@ -4,24 +4,49 @@ from sklearn import preprocessing
 from numpy import array,arange,nan
 
 class Data(object):
+  """
+  Esta clase es para leer un archivo CSV de los experimentos para posteriormente
+  Extraer metadatos, datos validos y exportar a trainset.
+  """  
   def __init__(self, name, path, experiments_time=75):
     self.name = name
     self.csv = read_csv(path)
     self.header = read_csv(path,nrows=0)
     self.data = read_csv(path,header=None,skiprows=1)
-    self.__set_data()
+    self.__set_data__()
     self.experiment_time = experiments_time
     self.set_markers()
+    # Estos canales son los definidos por el dispositivo con el que se hicieron los experimentos
     self.channels = ["AF3", "F7", "F3", "FC5", "T7", "P7", "O1", "O2", "P8", "T8", "FC6", "F4", "F8", "AF4"]
   
-  def __set_data(self):
+  def __set_data__(self):
+    """
+    Se extraen los metadatos y los datos limpios.
+    """    
     self.metadata = self.get_metadata_from_df(self.header)
     self.df_data = self.get_clean_dataframe(self.data, self.metadata)
 
   def parse_csv_datetime(self,value):
+    """
+    Parsea la fecha y hora de lo obtenido en el csv como metadato.
+    Args:
+        value (str): String que contiene la fecha.
+
+    Returns:
+        datetime: Fecha parseada.
+    """    
     return datetime.strptime(value, '%y.%m.%d %H.%M.%S')
 
   def get_metadata_from_df(self,df):
+    """
+    Se extrane los metadatos del CSV.
+
+    Args:
+        df (dataframe): dataframe del archivo csv.
+
+    Returns:
+        dict: metadatos
+    """    
     columns = list(df.columns.values)
     metadata = {}
     for column in columns:
@@ -34,11 +59,25 @@ class Data(object):
     return metadata
 
   def get_clean_dataframe(self, df, metadata, data_column="labels"):
+    """
+    Regresa un dataframe limpio con los valores por cada canal (columna)
+
+    Args:
+        df (dataframe): Dataframe del CSV.
+        metadata (dict): Metadatos
+        data_column (str, optional): Llave de los metadatos que contiene las columnas correspondientes. Defaults to "labels".
+
+    Returns:
+        [type]: [description]
+    """    
     new_columns = metadata[data_column].split(" ")
     new_df = DataFrame(df.to_numpy(),columns=new_columns)
     return new_df
 
   def set_markers(self):
+    """
+    Se establecen los marcadores de inicio y fin del experimento.
+    """    
     self.index_init_marker = self.df_data["MARKER"].loc[lambda x: x==1.0].index[0]
     self.index_end_marker = self.index_init_marker + self.experiment_time * int(self.metadata["sampling"])
     if self.index_end_marker > self.df_data.shape[0]:
@@ -46,6 +85,12 @@ class Data(object):
     return
 
   def get_util_data(self):
+    """
+    Regresa un dataframe con los canales como columnas y diversos datos utiles.
+
+    Returns:
+        dataframe: Dataframe que corresponde a los valores por cada canal y cuando se inicio el experimento
+    """    
     exp = self.df_data
     index_marker = exp['MARKER'].loc[lambda x: x==1.0].index[0]
     df = exp[index_marker:]
@@ -56,6 +101,12 @@ class Data(object):
     return DataFrame(x_scaled,columns=list(df.columns.values))*1000
 
   def to_trainset(self):
+    """
+    Se convierte el CSV a un formato compatible con 
+    https://trainset.geocene.com/
+    Returns:
+        dataframe: Dataframe Convertido
+    """    
     new_df_trainset = DataFrame()
     data = self.df_data
     channels = self.channels

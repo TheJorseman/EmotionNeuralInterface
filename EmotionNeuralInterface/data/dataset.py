@@ -2,6 +2,9 @@ import torch
 from torch.utils.data import Dataset
 
 class NetworkDataSet(Dataset):
+  """
+  Esta clase hereda de la clase Dataset de Pytorch, en esta se generan en forma de tensor todos los datos para ser procesados por la red neuronal.
+  """  
   def __init__(self, data, tokenizer):
     self.tokenizer = tokenizer
     self.data = data

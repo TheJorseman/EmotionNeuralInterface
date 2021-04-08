@@ -1,6 +1,9 @@
 import torch.nn as nn
 
 class CNN1D(nn.Module):
+    """
+    Este es el modulo que realiza una Convolución + Maxpool + dropout.
+    """    
     def __init__(self, filters, channels=1, kernel_size=9, stride=1, mp_kernel=10, mp_stride=1, dropout=0.3, input_size=1024):
         super(CNN1D,self).__init__()
         self.conv1d = nn.Conv1d(channels, filters, kernel_size)

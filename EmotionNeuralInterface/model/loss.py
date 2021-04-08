@@ -12,7 +12,7 @@ class ContrastiveLoss(nn.Module):
         self.margin = margin
         self.eps = 1e-9
 
-
+    """
     def forward(self, x0, x1, y):
         # euclidian distance
         diff = x0 - x1
@@ -30,4 +30,4 @@ class ContrastiveLoss(nn.Module):
         losses = 0.5 * (target.float() * distances +
                         (1 + -1 * target).float() * F.relu(self.margin - (distances + self.eps).sqrt()).pow(2))
         return losses.mean() if size_average else losses.sum()
-    """
+    

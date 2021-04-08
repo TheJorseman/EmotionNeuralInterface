@@ -1,5 +1,8 @@
 
 class Subject(object):
+  """
+  Clase que almacena la información de cada sujeto.
+  """  
   def __init__(self, name , data=[], subject_id=0):
     self.name = name
     self.data = data
@@ -7,6 +10,14 @@ class Subject(object):
     self.id = subject_id
 
   def set_indexs(self, data_index, channel, values):
+    """
+    Guarda en un diccionario el tipo de dato que contiene y a su vez el canal al que pertenece.
+
+    Args:
+        data_index (int): índice en el que está el estímulo.
+        channel (str): Canal
+        values (list): Lista con los valores del canal.
+    """    
     self.indexs[data_index][channel] = values
 
   def get_indexs(self, data_index, channel):
@@ -24,6 +35,9 @@ class Subject(object):
 
 
 class Subjects(object):
+  """
+  Clase que alacena todos los sujetos.
+  """  
   def __init__(self):
     self.data_by_subject = {}
     self.full_data = []
