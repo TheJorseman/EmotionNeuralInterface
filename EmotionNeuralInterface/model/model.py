@@ -2,23 +2,25 @@ import torch.nn as nn
 from .encoder import CNN1D
 
 class SiameseNetwork(nn.Module):
-    def __init__(self, window_size=1024, conv_kernel=9, stride=1, dropout=0.3):
+    def __init__(self, window_size=512, conv_kernel=9, stride=5, dropout=0.3):
         super(SiameseNetwork, self).__init__()
-        channels = (128, 64, 32, 16)
+        channels = (64, 64, 64, 16)
+        # 64-64-64
+        # 
         #mp_kernel1 = int(window_size - (conv_kernel - 1) - (window_size/2) + 1)
         #print("mp_kernel1", mp_kernel1)
-        self.encoder1 = CNN1D(channels[0], kernel_size=conv_kernel, mp_kernel=2)
-        output1 = self.calculate_output(window_size, conv_kernel, stride, 2, 1) 
-        self.encoder2 = CNN1D(channels[1], channels=channels[0], kernel_size=3, mp_kernel=2)
-        output2 = self.calculate_output(output1, 3, stride, 2, 1) 
-        self.encoder3 = CNN1D(channels[2], channels=channels[1], kernel_size=3, mp_kernel=2)
-        output3 = self.calculate_output(output2, 3, stride, 2, 1) 
-        mp_kernel = self.get_kernel_mp(256, output3, 3, stride, 1)
-        self.encoder4 = CNN1D(channels[3], channels=channels[2], kernel_size=3, mp_kernel=mp_kernel)     
-        #output4 = self.calculate_output(output3, 3, stride, 9, 1)   
-        self.fc1 = nn.Linear(256*channels[3], 256)
+        self.encoder1 = CNN1D(channels[0], kernel_size=5, mp_kernel=1)
+        output1 = self.calculate_output(window_size, 5, stride, 2, 1) 
+        self.encoder2 = CNN1D(channels[1], channels=channels[0], kernel_size=5, mp_kernel=2, mp_stride=2)
+        output2 = self.calculate_output(output1, 3, stride, 2, 2) 
+        self.encoder3 = CNN1D(channels[2], channels=channels[1], kernel_size=5, mp_kernel=2, mp_stride=2)
+        output3 = self.calculate_output(output2, 3, stride, 5, 2) 
+        #mp_kernel = self.get_kernel_mp(256, output3, 3, stride, 1)
+        #self.encoder4 = CNN1D(channels[3], channels=channels[2], kernel_size=3, mp_kernel=mp_kernel)     
+        #output4 = self.calculate_output(output3, 3, stride, 9, 1)  
+        self.fc1 = nn.Linear(7936, 64)
         #self.fc2 = nn.Linear(dim[3], dim[4])
-        self.normalization = nn.BatchNorm1d(256)
+        self.normalization = nn.BatchNorm1d(64)
         #self.sigmoid = nn.Sigmoid()
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(p=dropout)
@@ -43,11 +45,12 @@ class SiameseNetwork(nn.Module):
 
     def forward_once(self, x):
         # Forward pass 
+        #import pdb;pdb.set_trace()
         output = self.encoder1(x.unsqueeze(1))
         #output = output.view(output.size()[0], -1)
         output = self.encoder2(output)
         output = self.encoder3(output)
-        output = self.encoder4(output)
+        #output = self.encoder4(output)
         #output = output.view(output.size()[0], -1)
         #output = self.encoder3(output.unsqueeze(1))
         output = output.view(output.size()[0], -1)

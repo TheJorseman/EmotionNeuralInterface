@@ -1,8 +1,8 @@
 dataset:
   dataset_path: "C:/Users/migue/Documents/GitHub/Datasets/Experimento"
 tokenizer:
-  window_size: 1024
-  stride: 512
+  window_size: 512
+  stride: 256
 dataset_subjects:
   train_subjects: 14
   test_subjects: 3
@@ -20,7 +20,7 @@ datagen_config:
   subjects_overfitting: 2
   train_dataset_len: 50
 dataset_batch:
-  train_batch_size: 4
+  train_batch_size: 32
   validation_batch_size: 2
   test_batch_size: 1
   learning_rate: 0.0001
@@ -35,7 +35,7 @@ optimizer: "adam"
 train:
   load_model: False
   load_model_name: "C:/Users/migue/Documents/GitHub/EmotionNeuralInterface/models/emotion_neural_interface_model-CNN-128-64-32-16-same_channel-margin0.6-P1-loss1-epoch600_dev-thejorseman_1616107236.046163/model-CNN-128-64-32-16-same_channel-margin0.6-P1-loss1-epoch600.pt"
-  epochs: 500
+  epochs: 300
   save_each: ""
   #save_each: "100-iter"
 validation:

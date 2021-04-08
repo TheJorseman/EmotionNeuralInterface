@@ -287,9 +287,10 @@ class Workbench(object):
         report.write(class_report)
         report.close()
         # TSNE
-        self.plot_tsne(df)
+        df_plot = df.sample(frac=0.25)
+        self.plot_tsne(df_plot)
         #UMAP
-        self.plot_umap(df)
+        self.plot_umap_proc(df_plot)
         self.save_test_data(df)
         return
     
@@ -297,7 +298,7 @@ class Workbench(object):
         path = os.path.join(self.base_path, 'data_test.csv') 
         return df.to_csv(path)
 
-    def plot_umap(self, df):
+    def plot_umap_proc(self, df):
         folder = self.plot_path
         umap_2d = UMAP(n_components=2, init='random', random_state=0)
         umap_3d = UMAP(n_components=3, init='random', random_state=0)
