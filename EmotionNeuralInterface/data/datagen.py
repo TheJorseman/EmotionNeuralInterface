@@ -117,7 +117,7 @@ class DataGen(object):
     dataset_neg = []
     len_channels = int((samples/(len(self.subjects)*self.len_data))/2)
     #len_channels = 14 if len_channels>14 else len_channels
-    len_channels = 14
+    len_channels = 3
     #len_channels = 10
     step = 2
     for subject in self.subjects:

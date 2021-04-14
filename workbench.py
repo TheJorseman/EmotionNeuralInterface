@@ -115,6 +115,11 @@ class Workbench(object):
         self.training_set = NetworkDataSet(self.data_train, self.tokenizer)
         self.validation_set = NetworkDataSet(self.data_train, self.tokenizer)
         self.testing_set = NetworkDataSet(self.data_test, self.tokenizer)
+        self.print_dataset()
+
+    def print_dataset(self):
+        print("Train len: {}".format(len(self.data_train)))
+        print("Test len: {}".format(len(self.data_test)))
 
 
     def load_dataset_batch(self):
@@ -154,6 +159,7 @@ class Workbench(object):
         if self.data["train"]["load_model"]:
             return torch.load(self.data["train"]["load_model_name"])
         return SiameseNetwork()
+        #return SiameseLinearNetwork((self.data["tokenizer"]["window_size"],128,128,64))
 
     def get_optimizer(self, model):
         if self.data["optimizer"] == "adam":
@@ -203,17 +209,19 @@ class Workbench(object):
         n = 1
         n_correct = 0
         examples = 0
+        distance = nn.PairwiseDistance()
         for _,data in enumerate(self.training_loader, 0):
             input1 = data["input1"].to(self.device)
             input2 = data["input2"].to(self.device)
             target = data["output"].to(self.device)
             output1, output2 = self.model(input1, input2)
             loss_contrastive = self.loss_function(output1, output2, target.unsqueeze(1))
+            self.optimizer.zero_grad()
             loss_contrastive.backward()
             self.optimizer.step()
             print("Epoch {} Current loss {}\n".format(epoch,loss_contrastive.item()))
             self.writer.add_scalar("Loss/train", loss_contrastive.item(), epoch)
-            eucledian_distance = F.pairwise_distance(output1, output2)
+            eucledian_distance = distance(output1, output2)
             n_correct += self.calcuate_metric(eucledian_distance, target)
             examples += target.size(0)
             print(eucledian_distance)
@@ -232,6 +240,7 @@ class Workbench(object):
         self.model.to(self.device)
         self.margin = self.data["loss"]["margin"]
         self.loss_function = ContrastiveLoss(self.margin)
+        #self.loss_function = nn.MarginRankingLoss(margin=self.margin)
         self.optimizer = self.get_optimizer(self.model)
 
     def train(self):

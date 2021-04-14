@@ -1,4 +1,4 @@
-from pandas import read_csv, DataFrame
+from pandas import read_csv, DataFrame, Series
 from datetime import datetime, timedelta
 from sklearn import preprocessing
 from numpy import array,arange,nan
@@ -90,15 +90,21 @@ class Data(object):
 
     Returns:
         dataframe: Dataframe que corresponde a los valores por cada canal y cuando se inicio el experimento
-    """    
+    """ 
+    factor = 1   
     exp = self.df_data
     index_marker = exp['MARKER'].loc[lambda x: x==1.0].index[0]
     df = exp[index_marker:]
-    x = df.values
+    new_df = DataFrame()
+    #x = df.values
     min_max_scaler = preprocessing.MinMaxScaler()
-    x_scaled = min_max_scaler.fit_transform(x)
+    for channel in self.channels:
+      values = df[channel].values.reshape(-1, 1)
+      x_scaled = min_max_scaler.fit_transform(values)
+      new_df[channel] = Series(x_scaled.reshape(-1)) * factor
     #############
-    return DataFrame(x_scaled,columns=list(df.columns.values))*1000
+    return new_df
+    #return DataFrame(x_scaled,columns=list(df.columns.values))*1
 
   def to_trainset(self):
     """
