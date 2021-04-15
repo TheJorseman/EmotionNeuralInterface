@@ -153,8 +153,8 @@ if model_name + ext in os.listdir(folder):
   print("Se cargo el modelo")
   model = torch.load(model_name)
 else:
-  #model = SiameseLinearNetwork((128,64,128,256))
-  model = SiameseNetwork()
+  model = SiameseLinearNetwork((128,64,128,256))
+  #model = SiameseNetwork()
 #model = SiameseNetwork()
 model.to(device)
 margin = 15

@@ -168,8 +168,16 @@ class Workbench(object):
             return torch.optim.SGD(model.parameters(), lr=self.LEARNING_RATE)
         raise Warning("No optimizer")
 
-    def calcuate_metric(self, outputs, targets):
-        o_labels = torch.cuda.IntTensor([self.target_cod["positive"] if tensor.item() < self.margin else self.target_cod["negative"] for tensor in outputs])
+
+    def calculate_distance(self, output1, output2):
+        return torch.sqrt((output2 - output1).pow(2).sum(1))
+
+    def calculate_label(self, distances):
+        return torch.cuda.IntTensor([self.target_cod["positive"] if tensor.item() < self.margin else self.target_cod["negative"] for tensor in distances])
+
+    def calcuate_metric(self, output1, output2, targets):
+        distances = self.calculate_distance(output1, output2)
+        o_labels = self.calculate_label(distances)
         n_correct = (o_labels==targets).sum().item()
         return n_correct
     
@@ -195,8 +203,8 @@ class Workbench(object):
             target = data["output"].to(self.device)
             output1, output2 = self.model(input1, input2)
             loss_contrastive = self.loss_function(output1, output2, target.unsqueeze(1))
-            eucledian_distance = F.pairwise_distance(output1, output2)
-            n_correct += self.calcuate_metric(eucledian_distance, target)
+            eucledian_distance = self.calculate_distance(output1, output2)
+            n_correct += self.calcuate_metric(output1, output2, target)
             examples += target.size(0)
             if n % 10000 == 0:
                 break
@@ -213,16 +221,17 @@ class Workbench(object):
         for _,data in enumerate(self.training_loader, 0):
             input1 = data["input1"].to(self.device)
             input2 = data["input2"].to(self.device)
-            target = data["output"].to(self.device)
+            target = torch.squeeze(data["output"],0).to(self.device)
             output1, output2 = self.model(input1, input2)
-            loss_contrastive = self.loss_function(output1, output2, target.unsqueeze(1))
+            print("Targets ",target)
+            loss_contrastive = self.loss_function(output1, output2, target)
             self.optimizer.zero_grad()
             loss_contrastive.backward()
             self.optimizer.step()
             print("Epoch {} Current loss {}\n".format(epoch,loss_contrastive.item()))
             self.writer.add_scalar("Loss/train", loss_contrastive.item(), epoch)
             eucledian_distance = distance(output1, output2)
-            n_correct += self.calcuate_metric(eucledian_distance, target)
+            n_correct += self.calcuate_metric(output1, output2, target)
             examples += target.size(0)
             print(eucledian_distance)
             print(target)
@@ -271,14 +280,15 @@ class Workbench(object):
         for _,data in enumerate(self.testing_loader, 0):
             input1 = data["input1"].to(self.device)
             input2 = data["input2"].to(self.device)
-            targets = data["output"].to(self.device)
+            targets = torch.squeeze(data["output"],0).to(self.device)
             output1, output2 = self.model(input1, input2)
-            loss_contrastive = self.loss_function(output1, output2, targets.unsqueeze(1))
+            loss_contrastive = self.loss_function(output1, output2, targets)
             eucledian_distance = F.pairwise_distance(output1, output2)
-            y_real += [target.item() for target in targets]
-            y_predict += [self.target_cod["positive"] if tensor.item() < self.margin else self.target_cod["negative"] for tensor in eucledian_distance]
-            n_correct += self.calcuate_metric(eucledian_distance, targets)
-            examples += targets.size(0)
+            y_real += [target.item() for target in targets.unsqueeze(0)]
+            labels_predict = self.calculate_label(self.calculate_distance(output1, output2))
+            y_predict += [label.item() for label in labels_predict]
+            n_correct += self.calcuate_metric(output1, output2, targets)
+            examples += targets.unsqueeze(0).size(0)
             print("Acc= ", n_correct/examples)
             df.append({'Vector': output1.to("cpu").detach().numpy()[0], "Categ": data["output"].item(), "subject": data["subject1"].item(), "chn": data["chn1"].item(), "estimulo": data["estimulo"].item()})
             df.append({'Vector': output2.to("cpu").detach().numpy()[0], "Categ": data["output"].item(), "subject": data["subject2"].item(), "chn": data["chn2"].item(), "estimulo": data["estimulo"].item()})
