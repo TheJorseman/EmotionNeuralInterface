@@ -5,7 +5,11 @@ class Tokenizer(object):
   Esta clase sirve para "tokenizar" las series de tiempo, las convierte a ids y estos ids sirven para generar los datos y cuando se procesen
   obtener los datos.
   """  
-  def __init__(self, subjects, window_size=128 ,channels="all", pad_array=False, stride=128):
+  def __init__(self, subjects, 
+                    window_size=128,
+                    channels="all", 
+                    pad_array=False, 
+                    stride=64):
     """
     Constructor.
     Args:

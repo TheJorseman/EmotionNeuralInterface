@@ -11,6 +11,27 @@ class NetworkDataSet(Dataset):
 
   def __getitem__(self, i):
     data = self.data[i]
+    if type(data["input1"]) == type(list()):
+      return self.handle_multiple_channel(data)
+    else:
+      return self.handle_single_channel(data)
+
+
+  def handle_multiple_channel(self, data):
+    output = {}
+    input1_ids = data["input1"]
+    input1_matrix_list = [self.tokenizer.full_dataset[tid] for tid in input1_ids]
+    output["input1"] = torch.tensor(input1_matrix_list, dtype=torch.float32)
+    input2_ids = data["input2"]
+    input2_matrix_list = [self.tokenizer.full_dataset[tid] for tid in input2_ids]
+    output["input2"] = torch.tensor(input2_matrix_list, dtype=torch.float32)
+    output["output"] = torch.tensor(data["output"], dtype=torch.int)
+    output["channels"] = data["channels"]
+    output["subjects"] = data["subjects"]
+    output["stimulus"] = data["stimulus"]
+    return output
+
+  def handle_single_channel(self, data):
     output = {}
     input1_id = data["input1"]
     output["input1"] = torch.tensor(self.tokenizer.full_dataset[input1_id], dtype=torch.float32)
