@@ -1,0 +1,69 @@
+dataset:
+  dataset_path: "C:/Users/migue/Documents/GitHub/Datasets/Experimento"
+tokenizer:
+  window_size: 512
+  stride: 256
+dataset_subjects:
+  train_subjects: 14
+  test_subjects: 3
+  validation_subjects: 3
+datagen_config:
+  combinate_subjects: True
+  channel_iters: 300
+  target_codification:
+    positive: 1
+    negative: 0
+  #dataset: "same_channel_single_channel"
+  #dataset: "same_subject_single_channel"
+  #dataset: "consecutive_single_channel"
+  #dataset: "temporal_shifting_multiple_channel"
+  dataset: "relative_positioning_multiple_channel"
+  # Multiple Channel Config
+  multiple_channel:
+    # Number of multiple channels
+    multiple_channel_len: 14
+    # Number of maximum separation between two samples (value is proportional to window_size)
+    t_pos_max: 2
+    # dataset_len
+    dataset_train_len: 700000
+    dataset_test_len: 200000
+    dataset_validation_len: 100000
+    max_num_iter: 3000
+  use_overfitting: False
+  subjects_overfitting: 2
+  train_dataset_len: 50
+dataset_batch:
+  train_batch_size: 16
+  validation_batch_size: 2
+  test_batch_size: 1
+  learning_rate: 0.0001
+model:
+  folder_save: "models"
+  extention: ".pt"
+  fully_conected: False
+  #type: "siamese_linear"
+  #type: "siamese_conv"
+  type: "siamese_stagenet"
+  model_config_path: "C:/Users/migue/Documents/GitHub/EmotionNeuralInterface/config/models/stagenet.yaml"
+loss:
+  loss_fuction: "1"
+  margin: 0.6
+optimizer: "adam"
+train:
+  load_model: False
+  load_model_name: "C:/Users/migue/Documents/GitHub/EmotionNeuralInterface/models/emotion_neural_interface_model-CNN-128-64-32-16-same_channel-margin0.6-P1-loss1-epoch600_dev-thejorseman_1616107236.046163/model-CNN-128-64-32-16-same_channel-margin0.6-P1-loss1-epoch600.pt"
+  epochs: 400
+  save_each: ""
+  #save_each: "100-iter"
+validation:
+  use_each: ""
+  #use_each: "10000-iter"
+test:
+  use_test: True
+  dataset_train: False
+github:
+  dev: "thejorseman"
+
+
+
+
