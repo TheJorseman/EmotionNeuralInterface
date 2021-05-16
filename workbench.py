@@ -1,13 +1,23 @@
 from EmotionNeuralInterface.tools.paths_utils import get_paths_experiment
-from EmotionNeuralInterface.tools.experiment import Experiment
-from EmotionNeuralInterface.tools.transform_tools import experiment_to_subject
+from EmotionNeuralInterface.subject_data.utils import create_subject_data
 from EmotionNeuralInterface.data.tokenizer import Tokenizer
-from EmotionNeuralInterface.data.datagen import DataGen
+#from EmotionNeuralInterface.data.datagen import DataGen
+# Datasets Generators
+from EmotionNeuralInterface.data.pretext_task.same_channel_single_channel import SameChannel
+from EmotionNeuralInterface.data.pretext_task.same_subject_single_channel import SameSubject
+from EmotionNeuralInterface.data.pretext_task.consecutive_single_channel import Consecutive
+
+from EmotionNeuralInterface.data.pretext_task.relative_positioning import RelativePositioning
+from EmotionNeuralInterface.data.pretext_task.temporal_shifting import TemporalShifting
+
 from EmotionNeuralInterface.data.dataset import NetworkDataSet
 from EmotionNeuralInterface.tools.utils import split_data_by_len
-from EmotionNeuralInterface.model.model import SiameseLinearNetwork
 from EmotionNeuralInterface.model.loss import ContrastiveLoss
+
+from EmotionNeuralInterface.model.model import SiameseLinearNetwork
 from EmotionNeuralInterface.model.model import SiameseNetwork
+from EmotionNeuralInterface.model.stage_net import StageNet
+
 
 import torch
 from torch import cuda
@@ -44,6 +54,7 @@ class Workbench(object):
             print(self.data)
         self.device = 'cuda' if cuda.is_available() else 'cpu'
         torch.set_grad_enabled(False)
+        self.model_config = {}
         self.load_dataset()
         self.load_tokenizer()
         self.dataset_subjects()
@@ -52,10 +63,7 @@ class Workbench(object):
     
     def load_dataset(self):
         experiments_paths = get_paths_experiment(self.data["dataset"]["dataset_path"])
-        experiments = {}
-        for folder,file_paths in experiments_paths.items():
-            experiments[folder] = Experiment(folder,file_paths)
-        self.subjects = experiment_to_subject(experiments).copy_list()
+        self.experiments, self.subjects = create_subject_data(experiments_paths)
         
     def load_tokenizer(self):
         data = self.data["tokenizer"]
@@ -63,7 +71,7 @@ class Workbench(object):
 
     def dataset_subjects(self):
         data = self.data["dataset_subjects"]
-        self.train_subjets, other_subjets = split_data_by_len(self.subjects,data["train_subjects"])
+        self.train_subjets, other_subjets = split_data_by_len(self.subjects.copy_list(), data["train_subjects"])
         self.validation_subjets, self.test_subjets = split_data_by_len(other_subjets,data["test_subjects"])
     
     def datagen_config(self):
@@ -76,40 +84,53 @@ class Workbench(object):
             return
         self.set_train_datagen()
         self.set_validation_datagen()
-        self.set_train_datagen()
+        self.set_test_datagen()
 
     def set_train_datagen(self):
-        self.train_data_generator = DataGen(self.train_subjets, self.tokenizer, combinate_subjects=self.combinate_subjects, channels_iter=self.channel_iters, targets_cod=self.target_cod)
-        self.data_train = self.get_dataset(self.train_data_generator)
+        self.train_data_generator = self.get_dataset_generator(self.train_subjets, key_len_multiple="dataset_train_len")
+        self.data_train = self.train_data_generator.get_dataset()
         print("Entrenamiento")
         print(self.train_data_generator.dataset_metadata)
         self.training_set = NetworkDataSet(self.data_train, self.tokenizer)
 
-    def set_validation_datagen(self):
-        self.validation_data_generator = DataGen(self.validation_subjets, self.tokenizer, combinate_subjects=self.combinate_subjects, channels_iter=self.channel_iters, targets_cod=self.target_cod)
-        self.data_validation = self.get_dataset(self.validation_data_generator)
-        print("Validacion")
-        print(self.train_data_generator.dataset_metadata)
-        self.validation_set = NetworkDataSet(self.data_validation, self.tokenizer)
 
     def set_validation_datagen(self):
-        self.test_data_generator = DataGen(self.test_subjets, self.tokenizer, combinate_subjects=self.combinate_subjects, channels_iter=self.channel_iters, targets_cod=self.target_cod)
-        self.data_test = self.get_dataset(self.test_data_generator)
+        self.validation_data_generator = self.get_dataset_generator(self.validation_subjets, key_len_multiple="dataset_validation_len")
+        self.data_validation = self.validation_data_generator.get_dataset()
+        print("Validacion")
+        print(self.validation_data_generator.dataset_metadata)
+        self.validation_set = NetworkDataSet(self.data_validation, self.tokenizer)
+
+    def set_test_datagen(self):
+        self.test_data_generator = self.get_dataset_generator(self.test_subjets, key_len_multiple="dataset_test_len")
+        self.data_test = self.test_data_generator.get_dataset()
         print("Test")
         print(self.test_data_generator.dataset_metadata)
         self.testing_set = NetworkDataSet(self.data_test, self.tokenizer)
 
-    def get_dataset(self, datagen):
-        if self.data["datagen_config"]["dataset"] == "same_channel":
-            return datagen.get_same_channel_dataset()
-        elif self.data["datagen_config"]["dataset"] == "same_subject":
-            return datagen.get_same_subject_dataset()
-        elif self.data["datagen_config"]["dataset"] == "consecutive":
-            return datagen.get_consecutive_dataset()
-        raise Warning("No valid Dataset")
+
+    def get_dataset_generator(self, subjects, key_len_multiple="dataset_len"):
+        multiple_channel_dict = self.data["datagen_config"]["multiple_channel"]
+        if self.data["datagen_config"]["dataset"] == "same_channel_single_channel":
+            return SameChannel(subjects, self.tokenizer, combinate_subjects=self.combinate_subjects, channels_iter=self.channel_iters, targets_cod=self.target_cod)
+        elif self.data["datagen_config"]["dataset"] == "same_subject_single_channel":
+            return SameSubject(subjects, self.tokenizer, combinate_subjects=self.combinate_subjects, channels_iter=self.channel_iters, targets_cod=self.target_cod)
+        elif self.data["datagen_config"]["dataset"] == "consecutive_single_channel":
+            return Consecutive(subjects, self.tokenizer, combinate_subjects=self.combinate_subjects, channels_iter=self.channel_iters, targets_cod=self.target_cod)
+        elif self.data["datagen_config"]["dataset"] == "relative_positioning_multiple_channel":
+            return RelativePositioning(subjects, self.tokenizer, multiple_channel_len=multiple_channel_dict["multiple_channel_len"],
+                                        t_pos_max=multiple_channel_dict["t_pos_max"],dataset_len=multiple_channel_dict[key_len_multiple],
+                                        max_num_iter=multiple_channel_dict["max_num_iter"],targets_cod=self.target_cod)
+        elif self.data["datagen_config"]["dataset"] == "temporal_shifting_multiple_channel":
+            return TemporalShifting(subjects, self.tokenizer, multiple_channel_len=multiple_channel_dict["multiple_channel_len"],
+                                        t_pos_max=multiple_channel_dict["t_pos_max"],dataset_len=multiple_channel_dict[key_len_multiple],
+                                        max_num_iter=multiple_channel_dict["max_num_iter"],targets_cod=self.target_cod)
+        
+        raise Warning("No valid Dataset")    
+
 
     def datagen_overfitting(self):
-        train_data_generator = DataGen(self.train_subjets, self.tokenizer, combinate_subjects=self.combinate_subjects, channels_iter=self.channel_iters, targets_cod=self.target_cod)
+        train_data_generator = self.get_dataset(self.train_subjets)
         self.data_train = train_data_generator.get_tiny_custom_channel_dataset_test(self.data["datagen_config"]["train_dataset_len"])
         self.data_test = train_data_generator.get_tiny_custom_channel_dataset_test(self.data["datagen_config"]["train_dataset_len"])
         self.training_set = NetworkDataSet(self.data_train, self.tokenizer)
@@ -158,8 +179,21 @@ class Workbench(object):
     def get_model(self):
         if self.data["train"]["load_model"]:
             return torch.load(self.data["train"]["load_model_name"])
-        return SiameseNetwork()
-        #return SiameseLinearNetwork((self.data["tokenizer"]["window_size"],128,128,64))
+        return self.get_type_model()
+
+    def get_type_model(self):
+        
+        with open(self.data["model"]["model_config_path"]) as f:
+            self.model_config = yaml.load(f, Loader=yaml.FullLoader)
+            print(self.model_config)
+        if self.data["model"]["type"] == "siamese_stagenet":
+            return StageNet(self.model_config)
+        elif self.data["model"]["type"] == "siamese_conv":
+            return SiameseNetwork()
+        elif self.data["model"]["type"] == "siamese_linear":
+            return SiameseLinearNetwork((self.data["tokenizer"]["window_size"],128,128,64))
+        raise Warning("No type model found")
+
 
     def get_optimizer(self, model):
         if self.data["optimizer"] == "adam":
@@ -378,22 +412,26 @@ class Workbench(object):
         path = os.path.join(self.base_path, 'data.yaml') 
         with open(path, 'w') as outfile:
             yaml.dump(self.data, outfile, default_flow_style=False)
+        path_model = os.path.join(self.base_path, 'model_config.yaml') 
+        with open(path_model, 'w') as outfile:
+            yaml.dump(self.model_config , outfile, default_flow_style=False)        
         return
 
     def run(self):
+        #import pdb;pdb.set_trace()
         branch = "emotion_neural_interface_{}_dev-{}_{}".format(self.get_model_name(),self.data["github"]["dev"], datetime.now().timestamp())
         self.data["branch"] = branch
         self.set_folders(branch)
-        command = "git checkout -b {}".format(branch)
-        os.system(command)
+        #command = "git checkout -b {}".format(branch)
+        #os.system(command)
         self.train()
         self.model.eval()
         y_real, y_predict, y_distance, df =self.test()
         self.gen_model_reports(y_real, y_predict, y_distance, df)
         self.save_yaml_conf()
-        os.system("git add .")
-        os.system("git commit -m 'Se agrega el experimento'")
-        os.system("git checkout main")
+        #os.system("git add .")
+        #os.system("git commit -m 'Se agrega el experimento'")
+        #os.system("git checkout main")
 
     def run_test(self):
         branch = "emotion_neural_interface_{}_dev-{}_{}".format(self.get_model_name(),self.data["github"]["dev"], datetime.now().timestamp())
@@ -411,5 +449,5 @@ class Workbench(object):
         os.system("git checkout main")    
         return
     
-exp = Workbench("config.yaml")
+exp = Workbench("config/config.yaml")
 exp.run()
