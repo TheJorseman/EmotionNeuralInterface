@@ -14,6 +14,9 @@ class StageNet(nn.Module):
         print(shapes)
         #self.encoder1 = Encoder(layers["conv2d1"], channels_in=channels_in, h_in=height, w_in=width)
 
+    def get_linear_input_dim(self, values):
+        return prod(values)
+
     def get_modules(self, layers, dim_tuple):
         modules = []
         shapes = [dim_tuple]
@@ -21,7 +24,7 @@ class StageNet(nn.Module):
             if "conv" in key:
                 modules.append(Encoder(layers[key], channels_in=shapes[-1][0], h_in=shapes[-1][1], w_in=shapes[-1][2]))
             elif "linear" in key:
-                modules.append(FullyConected(layers[key], prod(shapes[-1])))
+                modules.append(FullyConected(layers[key], self.get_linear_input_dim(shapes[-1])))
             shapes.append(modules[-1].calculate_output_shape())
         return modules, shapes
 
@@ -51,7 +54,7 @@ class FullyConected(nn.Module):
         self.dropout = nn.Dropout(p=config["dropout"])
 
     def calculate_output_shape(self):
-        return (self.config["output_dim"])
+        return [self.config["output_dim"]]
 
     def normalization(self, x):
         if self.norm:
