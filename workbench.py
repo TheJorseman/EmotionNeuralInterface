@@ -422,16 +422,16 @@ class Workbench(object):
         branch = "emotion_neural_interface_{}_dev-{}_{}".format(self.get_model_name(),self.data["github"]["dev"], datetime.now().timestamp())
         self.data["branch"] = branch
         self.set_folders(branch)
-        #command = "git checkout -b {}".format(branch)
-        #os.system(command)
+        command = "git checkout -b {}".format(branch)
+        os.system(command)
         self.train()
         self.model.eval()
         y_real, y_predict, y_distance, df =self.test()
         self.gen_model_reports(y_real, y_predict, y_distance, df)
         self.save_yaml_conf()
-        #os.system("git add .")
-        #os.system("git commit -m 'Se agrega el experimento'")
-        #os.system("git checkout main")
+        os.system("git add .")
+        os.system("git commit -m 'Se agrega el experimento'")
+        os.system("git checkout main")
 
     def run_test(self):
         branch = "emotion_neural_interface_{}_dev-{}_{}".format(self.get_model_name(),self.data["github"]["dev"], datetime.now().timestamp())
