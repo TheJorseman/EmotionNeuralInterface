@@ -324,8 +324,12 @@ class Workbench(object):
             n_correct += self.calcuate_metric(output1, output2, targets)
             examples += targets.unsqueeze(0).size(0)
             print("Acc= ", n_correct/examples)
-            df.append({'Vector': output1.to("cpu").detach().numpy()[0], "Categ": data["output"].item(), "subject": data["subject1"].item(), "chn": data["chn1"].item(), "estimulo": data["estimulo"].item()})
-            df.append({'Vector': output2.to("cpu").detach().numpy()[0], "Categ": data["output"].item(), "subject": data["subject2"].item(), "chn": data["chn2"].item(), "estimulo": data["estimulo"].item()})
+            if self.data["model"]["type"] in ["siamese_conv", "siamese_linear"]:
+                df.append({'Vector': output1.to("cpu").detach().numpy()[0], "Categ": data["output"].item(), "subject": data["subject1"].item(), "chn": data["chn1"].item(), "estimulo": data["estimulo"].item()})
+                df.append({'Vector': output2.to("cpu").detach().numpy()[0], "Categ": data["output"].item(), "subject": data["subject2"].item(), "chn": data["chn2"].item(), "estimulo": data["estimulo"].item()})
+            else:
+                df.append({'Vector': output1.to("cpu").detach().numpy()[0], "Categ": data["output"].item(), "subject": data["subjects"][0].item(), "chn": len(data["channels"]), "channels": [chn.item() for chn in data["channels"]], "estimulo": data["stimulus"][0].item()})
+                df.append({'Vector': output2.to("cpu").detach().numpy()[0], "Categ": data["output"].item(), "subject": data["subjects"][0].item(), "chn": len(data["channels"]), "channels": [chn.item() for chn in data["channels"]], "estimulo": data["stimulus"][0].item()})
             print("Completado: ", i)
             i += 1
         return y_real, y_predict, y_distance, DataFrame.from_dict(df)
@@ -450,4 +454,4 @@ class Workbench(object):
         return
     
 exp = Workbench("config/config.yaml")
-exp.run()
+exp.run_test()
