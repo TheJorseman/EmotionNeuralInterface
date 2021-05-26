@@ -8,8 +8,8 @@ layers:
     kernel: [1,50]
     stride: 1
     maxpool:
-      kernel: [1,13]
-      stride: [1,13]
+      kernel: [1,7]
+      stride: [1,7]
     #act_fn: "gelu"
     act_fn: "relu"
     dropout: 0.2
@@ -19,8 +19,8 @@ layers:
     kernel: [1,50]
     stride: 1
     maxpool:
-      kernel: [1,13]
-      stride: [1,13]
+      kernel: [1,7]
+      stride: [1,7]
     act_fn: "relu"
     dropout: 0.2
     batch_normalization: True
