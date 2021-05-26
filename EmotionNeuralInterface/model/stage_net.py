@@ -25,6 +25,7 @@ class StageNet(nn.Module):
                 modules.append(Encoder(layers[key], channels_in=shapes[-1][0], h_in=shapes[-1][1], w_in=shapes[-1][2]))
             elif "linear" in key:
                 modules.append(FullyConected(layers[key], self.get_linear_input_dim(shapes[-1])))
+            print(shapes)
             shapes.append(modules[-1].calculate_output_shape())
         return modules, shapes
 
@@ -116,24 +117,28 @@ class Encoder(nn.Module):
 
     def calculate_conv_shape(self, h_in, w_in, value_dict):
         conv_kernel = self.get_kernel_from_dict(value_dict["kernel"])
-        stride = value_dict["stride"]
-        return (value_dict["channels_out"], self.dim_out(h_in, conv_kernel[0], stride) , self.dim_out(w_in, conv_kernel[1], stride))
+        stride = self.get_kernel(value_dict["stride"])
+        return (value_dict["channels_out"], self.dim_out(h_in, conv_kernel[0], stride[0]) , self.dim_out(w_in, conv_kernel[1], stride[1]))
 
     def dim_out(self, val_in, kernel, stride, padding=0, dilatation=1):
-        return ((val_in + 2 * padding - dilatation * (kernel -1) - 1)/stride) + 1
+        return int(((val_in + 2 * padding - dilatation * (kernel -1) - 1)/stride) + 1)
 
     def calculate_mp_shape(self, conv_tuple, value_dict):
         #conv_kernel = self.get_kernel_from_dict(value_dict["kernel"])
         conv_kernel = value_dict["kernel"]
-        stride = value_dict["stride"]
-        return (conv_tuple[0], self.dim_out(conv_tuple[1], conv_kernel[0], stride) , self.dim_out(conv_tuple[2],conv_kernel[1],stride))  
+        stride = self.get_kernel(value_dict["stride"])
+        return (conv_tuple[0], self.dim_out(conv_tuple[1], conv_kernel[0], stride[0]) , self.dim_out(conv_tuple[2],conv_kernel[1],stride[1]))  
 
     def calculate_output_shape(self):
         output = self.calculate_conv_shape(self.h_in, self.w_in, self.values_dict)
         return self.calculate_mp_shape(output, self.values_dict["maxpool"])
 
     def get_kernel(self, value):
-        return value,value if type(value) == type(int) else value[0], value[1]
+        if isinstance(value, int):
+            return (value,value)
+        else:
+            return tuple(value)
+
 
 class SpatialConv(nn.Module):
 
