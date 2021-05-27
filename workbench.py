@@ -344,7 +344,8 @@ class Workbench(object):
         report.write(class_report)
         report.close()
         # TSNE
-        df_plot = df.sample(frac=0.75)
+        #df_plot = df.sample(frac=0.75)
+        df_plot = df 
         self.plot_tsne(df_plot)
         #UMAP
         self.plot_umap_proc(df_plot)
