@@ -4,23 +4,73 @@ spatial_conv:
     kernel: [14,1]
 layers:
   conv2d1:
-    channels_out: 16
-    kernel: [1,50]
+    channels_out: 256
+    kernel: [1,64]
     stride: 1
     maxpool:
-      kernel: [1,7]
-      stride: [1,7]
+      kernel: [1,2]
+      stride: [1,2]
     #act_fn: "gelu"
     act_fn: "relu"
     dropout: 0.2
     batch_normalization: True
   conv2d2:
-    channels_out: 16
-    kernel: [1,50]
+    channels_out: 128
+    kernel: [1,32]
     stride: 1
     maxpool:
-      kernel: [1,7]
-      stride: [1,7]
+      kernel: [1,2]
+      stride: [1,2]
+    act_fn: "relu"
+    dropout: 0.2
+    batch_normalization: True
+  conv2d3:
+    channels_out: 64
+    kernel: [1,32]
+    stride: 1
+    maxpool:
+      kernel: [1,2]
+      stride: [1,2]
+    act_fn: "relu"
+    dropout: 0.2
+    batch_normalization: True
+  conv2d4:
+    channels_out: 32
+    kernel: [1,16]
+    stride: 1
+    maxpool:
+      kernel: [1,2]
+      stride: [1,2]
+    act_fn: "relu"
+    dropout: 0.2
+    batch_normalization: True
+  conv2d5:
+    channels_out: 16
+    kernel: [1,16]
+    stride: 1
+    maxpool:
+      kernel: [1,2]
+      stride: [1,2]
+    act_fn: "relu"
+    dropout: 0.2
+    batch_normalization: True
+  conv2d6:
+    channels_out: 16
+    kernel: [1,8]
+    stride: 1
+    maxpool:
+      kernel: [1,2]
+      stride: [1,2]
+    act_fn: "relu"
+    dropout: 0.2
+    batch_normalization: True
+  conv2d7:
+    channels_out: 16
+    kernel: [1,8]
+    stride: 1
+    maxpool:
+      kernel: [1,2]
+      stride: [1,2]
     act_fn: "relu"
     dropout: 0.2
     batch_normalization: True

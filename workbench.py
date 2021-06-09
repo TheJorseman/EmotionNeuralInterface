@@ -36,6 +36,8 @@ from datetime import datetime
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import silhouette_samples
+from sklearn.metrics import silhouette_score
 from pandas import crosstab
 import numpy as np  
 ### PLOTS
@@ -350,8 +352,31 @@ class Workbench(object):
         #UMAP
         self.plot_umap_proc(df_plot)
         self.save_test_data(df)
+        try:
+            self.get_silhouette_result(df)
+        except:
+            print("Algo salio mal xD")
         return
     
+
+    def get_silhouette_result(self, df):
+        folder = self.plot_path
+        report = open(os.path.join(folder,"silhouette.txt"),"w")
+        score_category = silhouette_score(np.array(df.Vector.tolist()), np.array(df.Categ.tolist()))
+        score_subject = silhouette_score(np.array(df.Vector.tolist()), np.array(df.subject.tolist()))
+        score_channel = silhouette_score(np.array(df.Vector.tolist()), np.array(df.chn.tolist()))
+        score_stimulus = silhouette_score(np.array(df.Vector.tolist()), np.array(df.estimulo.tolist()))
+        report_txt = """
+        Silhouette 
+        Score Category:{}
+        Score Subject:{}
+        Score Channel:{}
+        Score Stimulus:{}
+        """.format(score_category,score_subject,score_channel,score_stimulus)
+        report.write(report_txt)
+        report.close()   
+        return
+
     def save_test_data(self,df):
         path = os.path.join(self.base_path, 'data_test.csv') 
         return df.to_csv(path)
@@ -418,9 +443,13 @@ class Workbench(object):
         with open(path, 'w') as outfile:
             yaml.dump(self.data, outfile, default_flow_style=False)
         path_model = os.path.join(self.base_path, 'model_config.yaml') 
+        # Se lee otra vez el archivo de configuracion por un bug
+        with open(self.data["model"]["model_config_path"]) as f:
+            self.model_config = yaml.load(f, Loader=yaml.FullLoader)
+        #######################################
         with open(path_model, 'w') as outfile:
             yaml.dump(self.model_config , outfile, default_flow_style=False)        
-        return
+        
 
     def run(self):
         #import pdb;pdb.set_trace()

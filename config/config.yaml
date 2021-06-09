@@ -50,13 +50,13 @@ loss:
   margin: 0.6
 optimizer: "adam"
 train:
-  load_model: True
+  load_model: False
   load_model_name: "C:/Users/migue/Documents/GitHub/EmotionNeuralInterface/models/emotion_neural_interface_model-CNN-128-64-32-16-relative_positioning_multiple_channel-margin0.6-P1-loss1-epoch20_dev-thejorseman_1622009004.152143/model-CNN-128-64-32-16-relative_positioning_multiple_channel-margin0.6-P1-loss1-epoch20-epoch-19..pt"
-  epochs: 2
+  epochs: 20
   save_each: "epoch"
   #save_each: "100-iter"
 validation:
-  use_each: ""
+  use_each: "epoch"
   #use_each: "10000-iter"
 test:
   use_test: True
