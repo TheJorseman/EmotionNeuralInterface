@@ -352,10 +352,7 @@ class Workbench(object):
         #UMAP
         self.plot_umap_proc(df_plot)
         self.save_test_data(df)
-        try:
-            self.get_silhouette_result(df)
-        except:
-            print("Algo salio mal xD")
+        self.get_silhouette_result(df)
         return
     
 
@@ -364,14 +361,17 @@ class Workbench(object):
         report = open(os.path.join(folder,"silhouette.txt"),"w")
         score_category = silhouette_score(np.array(df.Vector.tolist()), np.array(df.Categ.tolist()))
         score_subject = silhouette_score(np.array(df.Vector.tolist()), np.array(df.subject.tolist()))
-        score_channel = silhouette_score(np.array(df.Vector.tolist()), np.array(df.chn.tolist()))
+        if self.data["model"]["type"] in ["siamese_conv", "siamese_linear"]:
+            score_channel = silhouette_score(np.array(df.Vector.tolist()), np.array(df.chn.tolist()))
+        else:
+            score_channel = -999999999
         score_stimulus = silhouette_score(np.array(df.Vector.tolist()), np.array(df.estimulo.tolist()))
         report_txt = """
         Silhouette 
-        Score Category:{}
-        Score Subject:{}
-        Score Channel:{}
-        Score Stimulus:{}
+        Score Category: {}
+        Score Subject:  {}
+        Score Channel:  {}
+        Score Stimulus: {}
         """.format(score_category,score_subject,score_channel,score_stimulus)
         report.write(report_txt)
         report.close()   
