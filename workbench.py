@@ -184,12 +184,12 @@ class Workbench(object):
         return self.get_type_model()
 
     def get_type_model(self):
-        
         with open(self.data["model"]["model_config_path"]) as f:
             self.model_config = yaml.load(f, Loader=yaml.FullLoader)
             print(self.model_config)
         if self.data["model"]["type"] == "siamese_stagenet":
-            return StageNet(self.model_config)
+            channels = self.data["datagen_config"]["multiple_channel"]["multiple_channel_len"]
+            return StageNet(self.model_config, width=self.data["tokenizer"]["window_size"],height=channels)
         elif self.data["model"]["type"] == "siamese_conv":
             return SiameseNetwork()
         elif self.data["model"]["type"] == "siamese_linear":
@@ -353,8 +353,29 @@ class Workbench(object):
         self.plot_umap_proc(df_plot)
         self.save_test_data(df)
         self.get_silhouette_result(df)
+        self.get_data_model_report()
         return
     
+    def get_data_model_report(self):
+        folder = self.plot_path
+        report = open(os.path.join(folder,"data-model.txt"),"w")
+        data = """
+        Entrenamiento:
+        {}
+        Test:
+        {}
+        Validacion:
+        {}
+
+        MODELO:
+        {}
+        """.format( str(self.train_data_generator.dataset_metadata), 
+                    str(self.test_data_generator.dataset_metadata),
+                    str(self.validation_data_generator.dataset_metadata),
+                    str(self.model.shapes))
+        report.write(data)
+        report.close()   
+        return
 
     def get_silhouette_result(self, df):
         folder = self.plot_path
