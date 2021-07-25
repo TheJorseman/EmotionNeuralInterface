@@ -50,7 +50,7 @@ class NedBERT(nn.Module):
     def forward(self, input1, input2):
         # forward pass of input 1
         #import pdb;pdb.set_trace()
-        mask = self.generate_last_element_mask()
+        mask = self.generate_last_element_mask().to(self.device)
         #mask1 = self.generate_square_subsequent_mask().to(self.device)
         output1 = self.forward_once(input1, mask=mask)
         # forward pass of input 2
