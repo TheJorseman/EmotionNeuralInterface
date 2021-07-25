@@ -195,7 +195,7 @@ class Workbench(object):
         elif self.data["model"]["type"] == "siamese_linear":
             return SiameseLinearNetwork((self.data["tokenizer"]["window_size"],128,128,64))
         elif self.data["model"]["type"] == "nedbert":
-            return NedBERT(self.model_config)
+            return NedBERT(self.model_config, sequence_lenght=self.data["tokenizer"]["window_size"])
         raise Warning("No type model found")
 
 

@@ -4,13 +4,13 @@ import torch
 import math
 
 class NedBERT(nn.Module):
-    def __init__(self, values, device=False):
+    def __init__(self, values, sequence_lenght=512, device=False):
         super(NedBERT,self).__init__()
         self.values = values
         self.device = self.device if device else torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.spatial_conv = SpatialConv(values["spatial_conv"])
         self.channels = values["spatial_conv"]["channels_out"]
-        self.sequence_length = values["sequence_length"]
+        self.sequence_length = sequence_lenght
         t_val = values["transformer"]
         po = values["positional_encoding"]
         d_model = values["d_model"]
@@ -27,10 +27,16 @@ class NedBERT(nn.Module):
         #                                    dim_feedforward=t_val["dim_feedforward"], dropout=t_val["dropout"], activation=t_val["activation"])
 
     def generate_square_subsequent_mask(self):
-        size1 = self.channels
-        size2 = self.d_model
+        size2 = self.sequence_length
         mask = (torch.triu(torch.ones(size2, size2)) == 1).transpose(0, 1)
         mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+        return mask
+
+    def generate_last_element_mask(self):
+        size = self.sequence_length
+        mask = torch.ones(size,size)
+        mask[-1] = torch.zeros(size)
+        mask = mask.transpose(0,1)
         return mask
 
     def forward_once(self, x, mask=None):
@@ -38,17 +44,18 @@ class NedBERT(nn.Module):
         output = output.squeeze()
         output = output.transpose(0, 2).transpose(1,2)
         output = self.pos_encoder(output)
-        output = self.transformer_encoder(output).transpose(0,1).transpose(1,2)
+        output = self.transformer_encoder(output, mask=mask).transpose(0,1).transpose(1,2)
         return output.mean(2)
 
     def forward(self, input1, input2):
         # forward pass of input 1
         #import pdb;pdb.set_trace()
+        mask = self.generate_last_element_mask()
         #mask1 = self.generate_square_subsequent_mask().to(self.device)
-        output1 = self.forward_once(input1)
+        output1 = self.forward_once(input1, mask=mask)
         # forward pass of input 2
         #mask2 = self.generate_square_subsequent_mask().to(self.device)
-        output2 = self.forward_once(input2)
+        output2 = self.forward_once(input2, mask=mask)
         #import pdb;pdb.set_trace()
         return output1, output2
 
