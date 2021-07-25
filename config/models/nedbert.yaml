@@ -8,8 +8,8 @@ positional_encoding:
   dropout: 0.2
 transformer:
   nhead: 8
-  num_encoder_layers: 8
-  num_decoder_layers: 8
+  num_encoder_layers: 6
+  num_decoder_layers: 6
   dim_feedforward: 1024
   dropout: 0.1
   activation: "relu"

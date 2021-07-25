@@ -33,7 +33,7 @@ datagen_config:
   subjects_overfitting: 2
   train_dataset_len: 50
 dataset_batch:
-  train_batch_size: 8
+  train_batch_size: 4
   validation_batch_size: 2
   test_batch_size: 1
   learning_rate: 0.0001

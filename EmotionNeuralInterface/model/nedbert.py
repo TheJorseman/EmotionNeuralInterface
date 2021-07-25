@@ -34,7 +34,6 @@ class NedBERT(nn.Module):
         return mask
 
     def forward_once(self, x, mask=None):
-        import pdb;pdb.set_trace()
         output = self.spatial_conv(x.unsqueeze(1))
         output = output.squeeze()
         output = output.transpose(0, 2).transpose(1,2)
@@ -45,10 +44,10 @@ class NedBERT(nn.Module):
     def forward(self, input1, input2):
         # forward pass of input 1
         #import pdb;pdb.set_trace()
-        mask1 = self.generate_square_subsequent_mask().to(self.device)
+        #mask1 = self.generate_square_subsequent_mask().to(self.device)
         output1 = self.forward_once(input1)
         # forward pass of input 2
-        mask2 = self.generate_square_subsequent_mask().to(self.device)
+        #mask2 = self.generate_square_subsequent_mask().to(self.device)
         output2 = self.forward_once(input2)
         #import pdb;pdb.set_trace()
         return output1, output2
