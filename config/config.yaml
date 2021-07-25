@@ -1,7 +1,7 @@
 dataset:
   dataset_path: "C:/Users/migue/Documents/GitHub/Datasets/Experimento"
 tokenizer:
-  window_size: 1024
+  window_size: 512
   stride: 256
 dataset_subjects:
   train_subjects: 14
@@ -33,7 +33,7 @@ datagen_config:
   subjects_overfitting: 2
   train_dataset_len: 50
 dataset_batch:
-  train_batch_size: 16
+  train_batch_size: 8
   validation_batch_size: 2
   test_batch_size: 1
   learning_rate: 0.0001
@@ -43,14 +43,17 @@ model:
   fully_conected: False
   #type: "siamese_linear"
   #type: "siamese_conv"
-  type: "siamese_stagenet"
-  model_config_path: "C:/Users/migue/Documents/GitHub/EmotionNeuralInterface/config/models/stagenet.yaml"
+  type: "nedbert"
+  #model_config_path: "C:/Users/migue/Documents/GitHub/EmotionNeuralInterface/config/models/stagenet.yaml"
+  model_config_path: "C:/Users/migue/Documents/GitHub/EmotionNeuralInterface/config/models/nedbert.yaml"
 loss:
-  loss_fuction: "1"
+  loss_function: "contrastive_loss"
+  #loss_fuction: "margin_raking"
+
   margin: 0.6
 optimizer: "adam"
 train:
-  load_model: True
+  load_model: False
   load_model_name: "C:/Users/migue/Documents/GitHub/EmotionNeuralInterface/models/emotion_neural_interface_model-CNN-128-64-32-16-relative_positioning_multiple_channel-margin0.6-P1-loss1-epoch3_dev-thejorseman_1623569187.726085/model-CNN-128-64-32-16-relative_positioning_multiple_channel-margin0.6-P1-loss1-epoch3pt"
   epochs: 100
   save_each: "epoch"

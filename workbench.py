@@ -17,7 +17,7 @@ from EmotionNeuralInterface.model.loss import ContrastiveLoss
 from EmotionNeuralInterface.model.model import SiameseLinearNetwork
 from EmotionNeuralInterface.model.model import SiameseNetwork
 from EmotionNeuralInterface.model.stage_net import StageNet
-
+from EmotionNeuralInterface.model.nedbert import NedBERT
 
 import torch
 from torch import cuda
@@ -171,12 +171,12 @@ class Workbench(object):
         self.testing_loader = DataLoader(self.testing_set, **test_params)
      
     def get_model_features(self):
-        return "CNN-128-64-32-16"
+        return self.data["model"]["type"]
 
     def get_model_name(self):
         return "model-{}-{}-margin{}-P{}-loss{}-epoch{}".format(self.get_model_features(), 
             self.data["datagen_config"]["dataset"], self.data["loss"]["margin"], self.target_cod["positive"],
-            self.data["loss"]["loss_fuction"], self.data["train"]["epochs"])
+            self.data["loss"]["loss_function"], self.data["train"]["epochs"])
 
     def get_model(self):
         if self.data["train"]["load_model"]:
@@ -194,6 +194,8 @@ class Workbench(object):
             return SiameseNetwork()
         elif self.data["model"]["type"] == "siamese_linear":
             return SiameseLinearNetwork((self.data["tokenizer"]["window_size"],128,128,64))
+        elif self.data["model"]["type"] == "nedbert":
+            return NedBERT(self.model_config)
         raise Warning("No type model found")
 
 
@@ -283,10 +285,22 @@ class Workbench(object):
         self.full_path = os.path.join(self.folder, self.model_name + self.ext)        
         self.model = self.get_model()
         self.model.to(self.device)
-        self.margin = self.data["loss"]["margin"]
-        self.loss_function = ContrastiveLoss(self.margin)
+        self.get_loss_function()
+        #self.margin = self.data["loss"]["margin"]
+        #self.loss_function = ContrastiveLoss(self.margin)
         #self.loss_function = nn.MarginRankingLoss(margin=self.margin)
         self.optimizer = self.get_optimizer(self.model)
+
+    def get_loss_function(self):
+        loss_func = self.data["loss"]["loss_function"]
+        if loss_func == "contrastive_loss":
+            self.margin = self.data["loss"]["margin"]
+            self.loss_function = ContrastiveLoss(self.margin)
+        elif loss_func == "margin_raking":
+            self.margin = self.data["loss"]["margin"]
+            self.loss_function = nn.MarginRankingLoss(margin=self.margin)
+        else:
+            raise Warning("No loss function")
 
     def train(self):
         self.prepare_model()

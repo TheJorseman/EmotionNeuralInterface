@@ -1,0 +1,16 @@
+name: "NedBERT"
+d_model: 1024
+sequence_length: 512
+spatial_conv:
+    channels_out: 1024
+    kernel: [14,1]
+positional_encoding:
+  dropout: 0.2
+transformer:
+  nhead: 8
+  num_encoder_layers: 8
+  num_decoder_layers: 8
+  dim_feedforward: 1024
+  dropout: 0.1
+  activation: "relu"
+  batch_first: True
