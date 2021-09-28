@@ -16,7 +16,7 @@ class SameChannel(SingleChannelInterface):
         dataset_neg = []    
         key = "same_channel"
         self.dataset_metadata[key] = {"len":0, "positive_count": 0, "negative_count" : 0}
-        subjects = self.get_subects()
+        subjects = self.get_subjects()
         for subject in subjects:
             for data_idx in range(self.len_data):
                 for i in range(self.channels_iter):
@@ -26,11 +26,13 @@ class SameChannel(SingleChannelInterface):
                     pos, neg = self.set_data_from_same_process(idx_data1, idx_data2, chn1, chn2, subject, key, extra_data=self.get_extra_data(subject, chn1, chn2, data_idx))
                     dataset_pos += pos
                     dataset_neg += neg
+                    if min([len(dataset_pos), len(dataset_neg)]) > self.max_data:
+                        break
         if self.balance_dataset:
             dataset_pos, dataset_neg = self.get_balanced_dataset(dataset_pos, dataset_neg) 
         self.dataset_metadata[key]["positive_count"] = len(dataset_pos)
         self.dataset_metadata[key]["negative_count"] = len(dataset_neg)
-        self.dataset_metadata[key]["len"] = len(self.same_channel_dataset) 
+        self.dataset_metadata[key]["len"] = self.dataset_metadata[key]["positive_count"] + self.dataset_metadata[key]["negative_count"]
         return dataset_pos + dataset_neg
 
 

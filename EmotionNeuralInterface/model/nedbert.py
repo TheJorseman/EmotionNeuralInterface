@@ -22,6 +22,7 @@ class NedBERT(nn.Module):
                                                     activation=t_val["activation"])
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=t_val["num_encoder_layers"])
         self.d_model = d_model
+        self.shapes = values
         #self.transformer = nn.Transformer(t_val["d_model"], t_val["nhead"], 
         #                                    num_encoder_layers=t_val["num_encoder_layers"], num_decoder_layers=t_val["num_decoder_layers"],
         #                                    dim_feedforward=t_val["dim_feedforward"], dropout=t_val["dropout"], activation=t_val["activation"])

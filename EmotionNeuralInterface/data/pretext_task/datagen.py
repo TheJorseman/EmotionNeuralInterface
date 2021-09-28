@@ -16,6 +16,7 @@ class DataGen(object):
                     balance_dataset=True, 
                     data_chn_sampling=-1, 
                     channels_iter=3000,
+                    max_data=500000,
                     targets_cod = {"positive": 1, "negative":0}):
     """
     Constructor
@@ -38,6 +39,7 @@ class DataGen(object):
     self.combine_data =combine_data
     self.balance_dataset = balance_dataset
     self.targets_cod = targets_cod 
+    self.max_data = max_data
     if isinstance(channels,list):
       self.channels = channels
     else:
@@ -54,9 +56,15 @@ class DataGen(object):
 
   def get_dataset(self):
     if len(self.dataset) > 0:
-      return self.dataset
+      return self.resample_data(self.dataset)
+    
     self.calculate_dataset()
-    return self.dataset
+    return self.resample_data(self.dataset)
+
+  def resample_data(self, dataset):
+    if len(dataset) > self.max_data:
+      return sample(dataset, self.max_data)
+    return dataset
 
   def calculate_dataset(self):
     return

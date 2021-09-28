@@ -19,7 +19,7 @@ class Consecutive(SingleChannelInterface):
                 for channel in self.channels:
                     index_splited_data = subject.get_indexs(data_ix, channel)
                     consecutive_dataset += self.__consecutive_permutation_data__(index_splited_data, subject, channel, data_ix)
-        self.dataset_metadata["consecutive"]["len"] = len(self.consecutive_dataset) 
+        self.dataset_metadata["consecutive"]["len"] = len(consecutive_dataset) 
         return consecutive_dataset
 
     def __consecutive_permutation_data__(self, idx_data, subject, channel, data_idx):
@@ -45,7 +45,7 @@ class Consecutive(SingleChannelInterface):
                 cons_data_pos.append({"input1": perm_index[i][0], "input2": perm_index[i][1], "output": self.targets_cod["positive"], "chn1" : channel, "chn2" : channel, "subject1" : subject.id, "subject2" : subject.id, "estimulo": data_idx})
             else:
                 # No es consecuente
-                cons_data_neg.append({"input1": perm_index[i][0], "input2": perm_index[i][1], "output": self.targets_cod["negative"] , "chn1" : channel, "chn2" : channel, "subject1" : subject.id, "subject2" : subject.id, "estimulo": data_idx})
+                cons_data_neg.append({"input1": perm_index[i][0], "input2": perm_index[i][1], "output": self.targets_cod["negative"] , "chn1" : channel, "chn2" : channel, "subject1" : subject.id, "subject2" : subject.id, "estimulo": data_idx})  
         if self.balance_dataset:
             cons_data_pos, cons_data_neg = self.get_balanced_dataset(cons_data_pos, cons_data_neg)
         self.dataset_metadata["consecutive"]["positive_count"] += len(cons_data_pos)

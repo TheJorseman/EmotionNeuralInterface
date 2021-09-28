@@ -6,14 +6,18 @@ from EmotionNeuralInterface.data.tokenizer import Tokenizer
 from EmotionNeuralInterface.data.pretext_task.same_channel_single_channel import SameChannel
 from EmotionNeuralInterface.data.pretext_task.same_subject_single_channel import SameSubject
 from EmotionNeuralInterface.data.pretext_task.consecutive_single_channel import Consecutive
-
+# Pretext Tasks
 from EmotionNeuralInterface.data.pretext_task.relative_positioning import RelativePositioning
 from EmotionNeuralInterface.data.pretext_task.temporal_shifting import TemporalShifting
-
+# Tools
 from EmotionNeuralInterface.data.dataset import NetworkDataSet
 from EmotionNeuralInterface.tools.utils import split_data_by_len
+# Loss
 from EmotionNeuralInterface.model.loss import ContrastiveLoss
-
+from EmotionNeuralInterface.model.loss import NTXentLoss
+from EmotionNeuralInterface.model.loss import CosineEmbeddingLoss
+from EmotionNeuralInterface.model.loss import ContrastiveLossSameZero
+# Models
 from EmotionNeuralInterface.model.model import SiameseLinearNetwork
 from EmotionNeuralInterface.model.model import SiameseNetwork
 from EmotionNeuralInterface.model.stage_net import StageNet
@@ -28,6 +32,7 @@ import torch.nn.functional as F
 #from sklearn.model_selection import train_test_split
 from pandas import DataFrame
 import os
+import pickle
 from random import shuffle, sample, seed
 import yaml
 
@@ -47,7 +52,7 @@ import seaborn as sns
 import plotly.express as px
 from umap import UMAP
 
-seed(27)
+#seed(27)
 
 class Workbench(object):
     def __init__(self, config_file):
@@ -81,6 +86,10 @@ class Workbench(object):
         self.target_cod = data["target_codification"]
         self.combinate_subjects = data["combinate_subjects"]
         self.channel_iters = data["channel_iters"]
+        # Dataset Len
+        self.dataset_train_len = data['dataset_train_len']
+        self.dataset_test_len = data['dataset_test_len']
+        self.dataset_validation_len = data['dataset_validation_len']
         if data["use_overfitting"]:
             self.datagen_overfitting()
             return
@@ -89,7 +98,7 @@ class Workbench(object):
         self.set_test_datagen()
 
     def set_train_datagen(self):
-        self.train_data_generator = self.get_dataset_generator(self.train_subjets, key_len_multiple="dataset_train_len")
+        self.train_data_generator = self.get_dataset_generator(self.train_subjets, dataset_max_len=self.dataset_train_len)
         self.data_train = self.train_data_generator.get_dataset()
         print("Entrenamiento")
         print(self.train_data_generator.dataset_metadata)
@@ -97,38 +106,38 @@ class Workbench(object):
 
 
     def set_validation_datagen(self):
-        self.validation_data_generator = self.get_dataset_generator(self.validation_subjets, key_len_multiple="dataset_validation_len")
+        self.validation_data_generator = self.get_dataset_generator(self.validation_subjets, dataset_max_len=self.dataset_validation_len)
         self.data_validation = self.validation_data_generator.get_dataset()
         print("Validacion")
         print(self.validation_data_generator.dataset_metadata)
         self.validation_set = NetworkDataSet(self.data_validation, self.tokenizer)
 
     def set_test_datagen(self):
-        self.test_data_generator = self.get_dataset_generator(self.test_subjets, key_len_multiple="dataset_test_len")
+        self.test_data_generator = self.get_dataset_generator(self.test_subjets, dataset_max_len=self.dataset_test_len)
         self.data_test = self.test_data_generator.get_dataset()
         print("Test")
         print(self.test_data_generator.dataset_metadata)
         self.testing_set = NetworkDataSet(self.data_test, self.tokenizer)
 
 
-    def get_dataset_generator(self, subjects, key_len_multiple="dataset_len"):
+    def get_dataset_generator(self, subjects, dataset_max_len=500000):
         multiple_channel_dict = self.data["datagen_config"]["multiple_channel"]
         if self.data["datagen_config"]["dataset"] == "same_channel_single_channel":
-            return SameChannel(subjects, self.tokenizer, combinate_subjects=self.combinate_subjects, channels_iter=self.channel_iters, targets_cod=self.target_cod)
+            return SameChannel(subjects, self.tokenizer, combinate_subjects=self.combinate_subjects, channels_iter=self.channel_iters, max_data=dataset_max_len, targets_cod=self.target_cod)
         elif self.data["datagen_config"]["dataset"] == "same_subject_single_channel":
-            return SameSubject(subjects, self.tokenizer, combinate_subjects=self.combinate_subjects, channels_iter=self.channel_iters, targets_cod=self.target_cod)
+            return SameSubject(subjects, self.tokenizer, combinate_subjects=self.combinate_subjects, channels_iter=self.channel_iters, max_data=dataset_max_len, targets_cod=self.target_cod)
         elif self.data["datagen_config"]["dataset"] == "consecutive_single_channel":
-            return Consecutive(subjects, self.tokenizer, combinate_subjects=self.combinate_subjects, channels_iter=self.channel_iters, targets_cod=self.target_cod)
+            return Consecutive(subjects, self.tokenizer, combinate_subjects=self.combinate_subjects, channels_iter=self.channel_iters, max_data=dataset_max_len, targets_cod=self.target_cod)
         elif self.data["datagen_config"]["dataset"] == "relative_positioning_multiple_channel":
             return RelativePositioning(subjects, self.tokenizer, multiple_channel_len=multiple_channel_dict["multiple_channel_len"],
-                                        t_pos_max=multiple_channel_dict["t_pos_max"],dataset_len=multiple_channel_dict[key_len_multiple],
-                                        max_num_iter=multiple_channel_dict["max_num_iter"],targets_cod=self.target_cod)
+                                        t_pos_max=multiple_channel_dict["t_pos_max"],dataset_len=dataset_max_len,
+                                        max_num_iter=multiple_channel_dict["max_num_iter"], targets_cod=self.target_cod)
         elif self.data["datagen_config"]["dataset"] == "temporal_shifting_multiple_channel":
             return TemporalShifting(subjects, self.tokenizer, multiple_channel_len=multiple_channel_dict["multiple_channel_len"],
-                                        t_pos_max=multiple_channel_dict["t_pos_max"],dataset_len=multiple_channel_dict[key_len_multiple],
+                                        t_pos_max=multiple_channel_dict["t_pos_max"],dataset_len=dataset_max_len,
                                         max_num_iter=multiple_channel_dict["max_num_iter"],targets_cod=self.target_cod)
         
-        raise Warning("No valid Dataset")    
+        raise Warning("No valid Dataset")  
 
 
     def datagen_overfitting(self):
@@ -153,8 +162,8 @@ class Workbench(object):
         self.LEARNING_RATE = data["learning_rate"]
 
         train_params = {'batch_size': self.TRAIN_BATCH_SIZE,
-                            'shuffle': True,
-                            'num_workers': 0
+                        'shuffle': True,
+                        'num_workers': 0
                         }
 
         validation_params = {'batch_size': self.VALID_BATCH_SIZE,
@@ -191,31 +200,44 @@ class Workbench(object):
             channels = self.data["datagen_config"]["multiple_channel"]["multiple_channel_len"]
             return StageNet(self.model_config, width=self.data["tokenizer"]["window_size"],height=channels)
         elif self.data["model"]["type"] == "siamese_conv":
-            return SiameseNetwork()
+            return SiameseNetwork(self.model_config, window_size=self.data["tokenizer"]["window_size"])
         elif self.data["model"]["type"] == "siamese_linear":
-            return SiameseLinearNetwork((self.data["tokenizer"]["window_size"],128,128,64))
+            return SiameseLinearNetwork(self.model_config, window_size=self.data["tokenizer"]["window_size"])
         elif self.data["model"]["type"] == "nedbert":
             return NedBERT(self.model_config, sequence_lenght=self.data["tokenizer"]["window_size"])
         raise Warning("No type model found")
 
 
     def get_optimizer(self, model):
-        if self.data["optimizer"] == "adam":
-            return torch.optim.Adam(model.parameters(), lr=self.LEARNING_RATE)
-        elif self.data["optimizer"] == "sgd":
-            return torch.optim.SGD(model.parameters(), lr=self.LEARNING_RATE)
+        w_decay = self.data["optimizer"]['w_decay']
+        momentum = self.data["optimizer"]['momentum']
+        if self.data["optimizer"]['name'] == "adam":
+            return torch.optim.Adam(model.parameters(), lr=self.LEARNING_RATE, weight_decay=w_decay)
+        elif self.data["optimizer"]['name'] == "sgd":
+            return torch.optim.SGD(model.parameters(), lr=self.LEARNING_RATE, weight_decay=w_decay, momentum=momentum)
         raise Warning("No optimizer")
 
 
     def calculate_distance(self, output1, output2):
-        return torch.sqrt((output2 - output1).pow(2).sum(1))
+        fn = self.get_distance_function()
+        return fn(output1, output2)
+        #return torch.sqrt((output2 - output1).pow(2).sum(1))
+
+
+    def get_distance_function(self):
+        if self.data["loss"]["loss_function"] in ["NTXentLoss", "CosineEmbeddingLoss"]: 
+            return F.cosine_similarity
+        return F.pairwise_distance
 
     def calculate_label(self, distances):
         return torch.cuda.IntTensor([self.target_cod["positive"] if tensor.item() < self.margin else self.target_cod["negative"] for tensor in distances])
 
     def calcuate_metric(self, output1, output2, targets):
+        #import pdb;pdb.set_trace()
         distances = self.calculate_distance(output1, output2)
         o_labels = self.calculate_label(distances)
+        print("Predicted Labels")
+        print(o_labels)
         n_correct = (o_labels==targets).sum().item()
         return n_correct
     
@@ -241,7 +263,7 @@ class Workbench(object):
             target = data["output"].to(self.device)
             output1, output2 = self.model(input1, input2)
             loss_contrastive = self.loss_function(output1, output2, target.unsqueeze(1))
-            eucledian_distance = self.calculate_distance(output1, output2)
+            distance = self.calculate_distance(output1, output2)
             n_correct += self.calcuate_metric(output1, output2, target)
             examples += target.size(0)
             if n % 10000 == 0:
@@ -255,23 +277,25 @@ class Workbench(object):
         n = 1
         n_correct = 0
         examples = 0
-        distance = nn.PairwiseDistance()
+        distance = self.get_distance_function()
         for _,data in enumerate(self.training_loader, 0):
             input1 = data["input1"].to(self.device)
             input2 = data["input2"].to(self.device)
             target = torch.squeeze(data["output"],0).to(self.device)
             output1, output2 = self.model(input1, input2)
-            print("Targets ",target)
+            #print("Targets ",target)
             loss_contrastive = self.loss_function(output1, output2, target)
             self.optimizer.zero_grad()
             loss_contrastive.backward()
             self.optimizer.step()
             print("Epoch {} Current loss {}\n".format(epoch,loss_contrastive.item()))
             self.writer.add_scalar("Loss/train", loss_contrastive.item(), epoch)
-            eucledian_distance = distance(output1, output2)
+            _distance = distance(output1, output2)
             n_correct += self.calcuate_metric(output1, output2, target)
             examples += target.size(0)
-            print(eucledian_distance)
+            print("Distance ")
+            print(_distance)
+            print("Target ")
             print(target)
             print("Acc ", (n_correct/examples)*100)
             self.writer.add_scalar("Accuracy/train", (n_correct/examples)*100, epoch)
@@ -286,9 +310,6 @@ class Workbench(object):
         self.model = self.get_model()
         self.model.to(self.device)
         self.get_loss_function()
-        #self.margin = self.data["loss"]["margin"]
-        #self.loss_function = ContrastiveLoss(self.margin)
-        #self.loss_function = nn.MarginRankingLoss(margin=self.margin)
         self.optimizer = self.get_optimizer(self.model)
 
     def get_loss_function(self):
@@ -299,10 +320,20 @@ class Workbench(object):
         elif loss_func == "margin_raking":
             self.margin = self.data["loss"]["margin"]
             self.loss_function = nn.MarginRankingLoss(margin=self.margin)
+        elif loss_func == "NTXentLoss":
+            batch_size = self.data['dataset_batch']['train_batch_size']
+            self.loss_function = NTXentLoss(self.device, batch_size, self.data['loss']['temperature'])
+        elif loss_func == "CosineEmbeddingLoss":
+            self.margin = self.data["loss"]["margin"]
+            self.loss_function = CosineEmbeddingLoss(self.margin)
+        elif loss_func == "contrastive_loss_custom":
+            self.margin = self.data["loss"]["margin"]
+            self.loss_function = ContrastiveLossSameZero(self.margin)
         else:
             raise Warning("No loss function")
 
     def train(self):
+        #import pdb;pdb.set_trace()
         self.prepare_model()
         torch.set_grad_enabled(True)
         self.EPOCHS=self.data["train"]["epochs"]
@@ -316,6 +347,34 @@ class Workbench(object):
             if self.data["validation"]["use_each"] == "epoch":
                 self.evaluate_model(epoch)
         torch.save(self.model, self.full_path)
+
+    def get_real_label(self, targets):
+        if len(targets.shape) == 1:
+            return [target.item() for target in targets]
+        return [target.item() for target in targets.unsqueeze(0)]
+
+    def get_num_samples(self, targets):
+        if len(targets.shape) == 1:
+            return targets.size(0)
+        return targets.unsqueeze(0).size(0)
+
+    def get_norm_targets(self, targets):
+        if len(targets.shape) == 1:
+            return targets
+        return targets.unsqueeze(0)
+
+
+    def create_test_data_output(self, df, data, output1, output2):
+        #import pdb;pdb.set_trace()
+        n_batch = output1.size(0)
+        g_value = lambda x: x.item() if isinstance(x, torch.Tensor) else x
+        for b in range(n_batch):
+            if self.data["model"]["type"] in ["siamese_conv", "siamese_linear"]:
+                df.append({'Vector': output1.to("cpu").detach().numpy()[b], "Categ": g_value(data["output"][b]), "subject": g_value(data["subject1"][b]), "chn": g_value(data["chn1"][b]), "estimulo": g_value(data["estimulo"][b])})
+                df.append({'Vector': output2.to("cpu").detach().numpy()[b], "Categ": g_value(data["output"][b]), "subject": g_value(data["subject2"][b]), "chn": g_value(data["chn2"][b]), "estimulo": g_value(data["estimulo"][b])})
+            else:
+                df.append({'Vector': output1.to("cpu").detach().numpy()[b], "Categ": data["output"][b].item(), "subject": data["subjects"][0][b].item(), "chn": len(data["channels"]), "channels": [chn[b].item() for chn in data["channels"]], "estimulo": data["stimulus"][0][b].item()})
+                df.append({'Vector': output2.to("cpu").detach().numpy()[b], "Categ": data["output"][b].item(), "subject": data["subjects"][0][b].item(), "chn": len(data["channels"]), "channels": [chn[b].item() for chn in data["channels"]], "estimulo": data["stimulus"][0][b].item()})
 
 
     def test(self):
@@ -333,19 +392,14 @@ class Workbench(object):
             targets = torch.squeeze(data["output"],0).to(self.device)
             output1, output2 = self.model(input1, input2)
             loss_contrastive = self.loss_function(output1, output2, targets)
-            eucledian_distance = F.pairwise_distance(output1, output2)
-            y_real += [target.item() for target in targets.unsqueeze(0)]
+            #eucledian_distance = F.pairwise_distance(output1, output2)
+            y_real += self.get_real_label(targets)
             labels_predict = self.calculate_label(self.calculate_distance(output1, output2))
             y_predict += [label.item() for label in labels_predict]
             n_correct += self.calcuate_metric(output1, output2, targets)
-            examples += targets.unsqueeze(0).size(0)
+            examples += self.get_num_samples(targets)
             print("Acc= ", n_correct/examples)
-            if self.data["model"]["type"] in ["siamese_conv", "siamese_linear"]:
-                df.append({'Vector': output1.to("cpu").detach().numpy()[0], "Categ": data["output"].item(), "subject": data["subject1"].item(), "chn": data["chn1"].item(), "estimulo": data["estimulo"].item()})
-                df.append({'Vector': output2.to("cpu").detach().numpy()[0], "Categ": data["output"].item(), "subject": data["subject2"].item(), "chn": data["chn2"].item(), "estimulo": data["estimulo"].item()})
-            else:
-                df.append({'Vector': output1.to("cpu").detach().numpy()[0], "Categ": data["output"].item(), "subject": data["subjects"][0].item(), "chn": len(data["channels"]), "channels": [chn.item() for chn in data["channels"]], "estimulo": data["stimulus"][0].item()})
-                df.append({'Vector': output2.to("cpu").detach().numpy()[0], "Categ": data["output"].item(), "subject": data["subjects"][0].item(), "chn": len(data["channels"]), "channels": [chn.item() for chn in data["channels"]], "estimulo": data["stimulus"][0].item()})
+            self.create_test_data_output(df, data, output1, output2)
             print("Completado: ", i)
             i += 1
         return y_real, y_predict, y_distance, DataFrame.from_dict(df)
@@ -359,13 +413,15 @@ class Workbench(object):
         report = open(os.path.join(folder,"report.txt"),"w")
         report.write(class_report)
         report.close()
+        #import pdb;pdb.set_trace()
+        frac = self.data["test"]["dataset_frac"]
         # TSNE
-        #df_plot = df.sample(frac=0.75)
+        df_plot = df.sample(frac=frac)
         df_plot = df 
         self.plot_tsne(df_plot)
         #UMAP
         self.plot_umap_proc(df_plot)
-        self.save_test_data(df)
+        #self.save_test_data(df)
         self.get_silhouette_result(df)
         self.get_data_model_report()
         return
@@ -413,7 +469,10 @@ class Workbench(object):
         return
 
     def save_test_data(self,df):
-        path = os.path.join(self.base_path, 'data_test.csv') 
+        path = os.path.join(self.base_path, 'data_test.csv')
+        pickle_path =  os.path.join(self.base_path, 'data_test.bin')
+        pickle_file = open(pickle_path, "wb")
+        pickle.dump(df, pickle_file)
         return df.to_csv(path)
 
     def plot_umap_proc(self, df):
@@ -487,7 +546,6 @@ class Workbench(object):
         
 
     def run(self):
-        #import pdb;pdb.set_trace()
         branch = "emotion_neural_interface_{}_dev-{}_{}".format(self.get_model_name(),self.data["github"]["dev"], datetime.now().timestamp())
         self.data["branch"] = branch
         self.set_folders(branch)

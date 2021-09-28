@@ -25,9 +25,11 @@ class SameSubject(SingleChannelInterface):
                     pos, neg = self.set_data_from_same_process(idx_data1, idx_data2, subject[0].id, subject[1].id, subject, key, extra_data=self.get_extra_data(subject, chn1, chn2, data_idx))
                     dataset_pos += pos
                     dataset_neg += neg
+                    if min([len(dataset_pos), len(dataset_neg)]) > self.max_data:
+                        break
         if self.balance_dataset:
             dataset_pos, dataset_neg = self.get_balanced_dataset(dataset_pos, dataset_neg)   
         self.dataset_metadata[key]["positive_count"] = len(dataset_pos)
         self.dataset_metadata[key]["negative_count"] = len(dataset_neg)
-        self.dataset_metadata[key]["len"] = len(self.same_subject_dataset) 
+        self.dataset_metadata[key]["len"] = len(dataset_pos) + len(dataset_neg)
         return dataset_pos + dataset_neg

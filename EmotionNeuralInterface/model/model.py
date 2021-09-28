@@ -1,5 +1,7 @@
 import torch.nn as nn
 from .encoder import CNN1D
+from .stage_net import FullyConected
+from math import prod
 
 class SiameseNetwork(nn.Module):
     def __init__(self, window_size=512, conv_kernel=9, stride=5, dropout=0.3):
@@ -70,24 +72,32 @@ class SiameseNetwork(nn.Module):
 
 
 class SiameseLinearNetwork(nn.Module):
-    def __init__(self, linear_values: tuple):
+    def __init__(self, value_dict, window_size=512):
         super(SiameseLinearNetwork, self).__init__()
-        self.fc1 = nn.Linear(linear_values[0],linear_values[1])
-        self.fc2 = nn.Linear(linear_values[1],linear_values[2])
-        self.fc3 = nn.Linear(linear_values[2],linear_values[3])
-        self.relu = nn.ReLU()
-        self.normalization = nn.BatchNorm1d(linear_values[-1])
-        self.dropout = nn.Dropout(p=0.3)
+        layers, shapes = self.get_modules(value_dict["layers"], (window_size, 1))
+        self.layers = nn.ModuleList(layers)
+        self.shapes = shapes
+        self.dropout = nn.Dropout(p=value_dict["dropout"])
+        print(shapes)
+
+    def get_linear_input_dim(self, values):
+        return prod(values)
+
+    def get_modules(self, layers, dim_tuple):
+        modules = []
+        shapes = [dim_tuple]
+        for key in layers.keys():
+            if "linear" in key:
+                modules.append(FullyConected(layers[key], self.get_linear_input_dim(shapes[-1])))
+            print(shapes)
+            shapes.append(modules[-1].calculate_output_shape())
+        return modules, shapes
 
     def forward_once(self, x):
-        output = self.fc1(x) 
-        output = self.relu(output) 
-        output = self.fc2(output) 
-        output = self.relu(output) 
-        output = self.fc3(output) 
-        output = self.relu(output) 
-        output = self.normalization(output) 
-        return self.dropout(output)
+        output = x
+        for layer in self.layers:
+            output = layer(output)
+        return output
 
     def forward(self, input1, input2):
         # forward pass of input 1

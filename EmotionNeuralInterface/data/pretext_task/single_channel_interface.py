@@ -43,7 +43,7 @@ class SingleChannelInterface(DataGen):
 
         Returns:
             tuple: Tupla con los dos datasets (positivo y negativo)
-        """    
+        """
         positive = []
         negative = []
         if self.data_chn_sampling == -1:
@@ -54,10 +54,17 @@ class SingleChannelInterface(DataGen):
             idx_data2 = sample(data2,self.data_chn_sampling)
         product_dataset = list(product(idx_data1, idx_data2))
         for data in product_dataset:
+            vals = {"input1": data[0], "input2": data[1], "output": self.targets_cod["positive"]}
             if var1 == var2:
-                positive.append({"input1": data[0], "input2": data[1], "output": self.targets_cod["positive"]}.update(extra_data))
+                #vals = {"input1": data[0], "input2": data[1], "output": self.targets_cod["positive"]}
+                vals.update({"output": self.targets_cod["positive"]})
+                vals.update(extra_data)
+                positive.append(vals)
             else:
-                negative.append({"input1": data[0], "input2": data[1], "output": self.targets_cod["negative"]}.update(extra_data))
+                #vals = {"input1": data[0], "input2": data[1], "output": self.targets_cod["negative"]}
+                vals.update({"output": self.targets_cod["negative"]})
+                vals.update(extra_data)
+                negative.append(vals)
         return positive,negative
 
     def get_data_from_subjets(self, subject, data_ix, chn1, chn2):

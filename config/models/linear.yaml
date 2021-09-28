@@ -1,0 +1,28 @@
+name: "siamese_linear_network"
+layers:
+  linear1:
+    output_dim: 256
+    act_fn: "relu"
+    dropout: 0.2
+    batch_normalization: True
+  linear2:
+    output_dim: 128
+    act_fn: "relu"
+    dropout: 0.2
+    batch_normalization: True
+  linear3:
+    output_dim: 32
+    act_fn: "relu"
+    dropout: 0.2
+    batch_normalization: True
+  linear4:
+    output_dim: 16
+    act_fn: "relu"
+    dropout: 0.2
+    batch_normalization: True
+  linear5:
+    output_dim: 254
+    act_fn: "relu"
+    dropout: 0.2
+    batch_normalization: True
+dropout: 0.3
