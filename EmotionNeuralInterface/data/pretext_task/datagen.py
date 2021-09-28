@@ -2,7 +2,7 @@ from itertools import permutations , combinations, combinations_with_replacement
 from random import sample, choice, seed, randint
 from math import ceil, floor
 
-seed(27)
+#seed(27)
 
 class DataGen(object):
   """

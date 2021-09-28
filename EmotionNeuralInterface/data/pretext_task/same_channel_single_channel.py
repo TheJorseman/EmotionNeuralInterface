@@ -24,9 +24,11 @@ class SameChannel(SingleChannelInterface):
                     chn2 = choice(self.channels)
                     idx_data1, idx_data2 = self.get_data_from_subjets(subject, data_idx, chn1, chn2)
                     pos, neg = self.set_data_from_same_process(idx_data1, idx_data2, chn1, chn2, subject, key, extra_data=self.get_extra_data(subject, chn1, chn2, data_idx))
-                    dataset_pos += pos
-                    dataset_neg += neg
-                    if min([len(dataset_pos), len(dataset_neg)]) > self.max_data:
+                    if len(dataset_pos) < self.max_data//2:
+                        dataset_pos += pos
+                    if len(dataset_neg) < self.max_data//2:
+                        dataset_neg += neg
+                    if min([len(dataset_pos), len(dataset_neg)]) > self.max_data//2:
                         break
         if self.balance_dataset:
             dataset_pos, dataset_neg = self.get_balanced_dataset(dataset_pos, dataset_neg) 
