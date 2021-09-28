@@ -1,8 +1,8 @@
 dataset:
   dataset_path: "C:/Users/migue/Documents/GitHub/Datasets/Experimento"
 tokenizer:
-  window_size: 512
-  stride: 256
+  window_size: 256
+  stride: 128
 dataset_subjects:
   train_subjects: 14
   test_subjects: 3
@@ -14,11 +14,11 @@ datagen_config:
     positive: 0
     negative: 1
   #dataset: "same_channel_single_channel"
-  #dataset: "same_subject_single_channel"
-  dataset: "consecutive_single_channel"
+  dataset: "same_subject_single_channel"
+  #dataset: "consecutive_single_channel"
   #dataset: "temporal_shifting_multiple_channel"
   #dataset: "relative_positioning_multiple_channel"
-  dataset_train_len: 1000000
+  dataset_train_len: 1400000
   dataset_test_len: 200000
   dataset_validation_len: 100000
   # Multiple Channel Config
@@ -40,15 +40,17 @@ model:
   folder_save: "models"
   extention: "pt"
   fully_conected: False
-  type: "siamese_linear"
-  #type: "siamese_conv"
+  #type: "siamese_linear"
+  type: "siamese_conv"
   #type: "siamese_stagenet"
   #type: "nedbert"
-  model_config_path: "config/models/linear.yaml"
+  #model_config_path: "config/models/linear.yaml"
+  model_config_path: "config/models/conv1d.yaml"
   #model_config_path: "config/models/stagenet.yaml"
   #model_config_path: "config/models/nedbert.yaml"
 loss:
-  loss_function: "contrastive_loss"
+  loss_function: "contrastive_loss_custom"
+  #loss_function: "contrastive_loss"
   #loss_function: "margin_raking"
   #loss_function: "CosineEmbeddingLoss"
   #loss_function: "NTXentLoss"
@@ -59,9 +61,9 @@ optimizer:
   w_decay: 0.0001
   momentum: 0.9
 train:
-  load_model: True
+  load_model: False
   load_model_name: "models/emotion_neural_interface_model-siamese_linear-consecutive_single_channel-margin0.6-P0-losscontrastive_loss-epoch100_dev-thejorseman_1632597585.413004/model-siamese_linear-consecutive_single_channel-margin0.6-P0-losscontrastive_loss-epoch100-epoch-99.pt"
-  epochs: 0
+  epochs: 100
   save_each: "epoch"
   #save_each: "100-iter"
 validation:

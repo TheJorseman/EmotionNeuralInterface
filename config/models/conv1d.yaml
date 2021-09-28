@@ -1,0 +1,48 @@
+name: "siamese_conv1d"
+layers:
+  conv2d1:
+    channels_out: 16
+    kernel: 8
+    stride: 1
+    maxpool:
+      kernel: 5
+      stride: 2
+    act_fn: "gelu"
+    #act_fn: "relu"
+    dropout: 0.2
+    batch_normalization: True
+  conv2d2:
+    channels_out: 64
+    kernel: 8
+    stride: 1
+    maxpool:
+      kernel: 5
+      stride: 2
+    act_fn: "gelu"
+    dropout: 0.2
+    batch_normalization: True
+  conv2d3:
+    channels_out: 32
+    kernel: 8
+    stride: 1
+    maxpool:
+      kernel: 5
+      stride: 2
+    act_fn: "gelu"
+    dropout: 0.2
+    batch_normalization: True
+  conv2d4:
+    channels_out: 16
+    kernel: 8
+    stride: 1
+    maxpool:
+      kernel: 5
+      stride: 2
+    act_fn: "gelu"
+    dropout: 0.2
+    batch_normalization: True
+  linear1:
+    output_dim: 256
+    act_fn: "gelu"
+    dropout: 0.2
+    batch_normalization: True
