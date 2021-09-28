@@ -7,6 +7,30 @@ from pytorch_metric_learning import losses
 from pytorch_metric_learning.distances import CosineSimilarity
 from pytorch_metric_learning.distances import LpDistance
 
+class ContrastiveLossSameZero(nn.Module):
+    """
+    Contrastive loss
+    Takes embeddings of two samples and a target label == 0 if samples are from the same class and label == 1 otherwise
+    """
+    def __init__(self, margin):
+        super(ContrastiveLoss, self).__init__()
+        self.margin = margin
+        #self.loss = nn.MarginRankingLoss(margin=self.margin)
+        self.eps = 1e-9
+
+    def forward(self, x0, x1, y):
+        # euclidian distance
+        diff = x0 - x1
+        dist_sq = torch.sum(torch.pow(diff, 2), 1)
+        dist = torch.sqrt(dist_sq)
+        mdist = self.margin - dist
+        dist = torch.clamp(mdist, min=0.0)
+        loss = y * dist_sq + (1 - y) * torch.pow(dist, 2)
+        loss = torch.sum(loss) / 2.0 / x0.size()[0]
+        return loss
+
+
+
 class ContrastiveLoss(nn.Module):
     """
     Contrastive loss
