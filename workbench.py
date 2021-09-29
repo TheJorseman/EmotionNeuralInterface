@@ -1,4 +1,4 @@
-from EmotionNeuralInterface.tools.paths_utils import get_paths_experiment
+from EmotionNeuralInterface.tools.paths_utils import get_paths_experiment, get_path
 from EmotionNeuralInterface.subject_data.utils import create_subject_data
 from EmotionNeuralInterface.data.tokenizer import Tokenizer
 #from EmotionNeuralInterface.data.datagen import DataGen
@@ -69,7 +69,8 @@ class Workbench(object):
         self.load_dataset_batch()
     
     def load_dataset(self):
-        experiments_paths = get_paths_experiment(self.data["dataset"]["dataset_path"])
+        path = get_path(self.data["dataset"]["dataset_path"])
+        experiments_paths = get_paths_experiment(path)
         self.experiments, self.subjects = create_subject_data(experiments_paths)
         
     def load_tokenizer(self):
