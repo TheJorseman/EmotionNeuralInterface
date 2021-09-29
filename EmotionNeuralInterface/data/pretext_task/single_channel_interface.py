@@ -54,7 +54,7 @@ class SingleChannelInterface(DataGen):
             idx_data2 = sample(data2,self.data_chn_sampling)
         product_dataset = list(product(idx_data1, idx_data2))
         for data in product_dataset:
-            vals = {"input1": data[0], "input2": data[1], "output": self.targets_cod["positive"]}
+            vals = {"input1": data[0], "input2": data[1]}
             if var1 == var2:
                 #vals = {"input1": data[0], "input2": data[1], "output": self.targets_cod["positive"]}
                 vals.update({"output": self.targets_cod["positive"]})

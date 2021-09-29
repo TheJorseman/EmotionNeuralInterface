@@ -234,6 +234,7 @@ class Workbench(object):
 
     def calcuate_metric(self, output1, output2, targets):
         #import pdb;pdb.set_trace()
+        batches = output1.size(0)
         distances = self.calculate_distance(output1, output2)
         o_labels = self.calculate_label(distances)
         print("Predicted Labels")
@@ -450,13 +451,25 @@ class Workbench(object):
     def get_silhouette_result(self, df):
         folder = self.plot_path
         report = open(os.path.join(folder,"silhouette.txt"),"w")
-        score_category = silhouette_score(np.array(df.Vector.tolist()), np.array(df.Categ.tolist()))
-        score_subject = silhouette_score(np.array(df.Vector.tolist()), np.array(df.subject.tolist()))
+        try:
+            score_category = silhouette_score(np.array(df.Vector.tolist()), np.array(df.Categ.tolist()))
+        except ValueError:
+            score_category = -999999
+        try:
+            score_subject = silhouette_score(np.array(df.Vector.tolist()), np.array(df.subject.tolist()))
+        except ValueError:
+            score_subject = -999999
         if self.data["model"]["type"] in ["siamese_conv", "siamese_linear"]:
-            score_channel = silhouette_score(np.array(df.Vector.tolist()), np.array(df.chn.tolist()))
+            try:
+                score_channel = silhouette_score(np.array(df.Vector.tolist()), np.array(df.chn.tolist()))
+            except ValueError:
+                score_channel = -999999
         else:
             score_channel = -999999999
-        score_stimulus = silhouette_score(np.array(df.Vector.tolist()), np.array(df.estimulo.tolist()))
+        try:
+            score_stimulus = silhouette_score(np.array(df.Vector.tolist()), np.array(df.estimulo.tolist()))
+        except ValueError:
+            score_stimulus = -999999999
         report_txt = """
         Silhouette 
         Score Category: {}
