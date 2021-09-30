@@ -62,9 +62,6 @@ setuptools==52.0.0.post20210125
 six==1.15.0
 tensorboard==2.3.0
 tensorboard-plugin-wit==1.7.0
-torch==1.9.1
-torchaudio==0.9.1
-torchvision==0.10.1
 tqdm==4.56.0
 umap-learn==0.5.1
 urllib3==1.26.3
