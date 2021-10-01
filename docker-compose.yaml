@@ -1,0 +1,11 @@
+version: "3.7"
+services:
+  odoo14:
+    build: .
+    ports:
+      - 6006:6006
+    volumes:
+      - ./config:/EmotionalNeuralInterface/config
+    gpus:
+      - all
+

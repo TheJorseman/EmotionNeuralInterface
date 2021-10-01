@@ -1,7 +1,7 @@
 import torch.nn as nn
 from .encoder import CNN2D
 from torch import transpose, flatten
-from math import prod
+from numpy import prod
 
 class StageNet(nn.Module):
     def __init__(self, value_dict, channels_in=1, height=14, width=512):

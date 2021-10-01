@@ -1,7 +1,7 @@
 import torch.nn as nn
 from .encoder import CNN1D
 from .stage_net import FullyConected
-from math import prod
+from numpy import prod
 
 class SiameseNetwork(nn.Module):
     def __init__(self, value_dict, channels_in=1, window_size=512):
