@@ -160,7 +160,7 @@ class Workbench(object):
         self.TRAIN_BATCH_SIZE = data["train_batch_size"]
         self.VALID_BATCH_SIZE = data["validation_batch_size"]
         self.TEST_BATCH_SIZE = data["test_batch_size"]
-        self.LEARNING_RATE = data["learning_rate"]
+        #self.LEARNING_RATE = data["learning_rate"]
 
         train_params = {'batch_size': self.TRAIN_BATCH_SIZE,
                         'shuffle': True,
@@ -181,12 +181,17 @@ class Workbench(object):
         self.testing_loader = DataLoader(self.testing_set, **test_params)
      
     def get_model_features(self):
-        return self.data["model"]["type"]
+        return self.model_config['name']
 
     def get_model_name(self):
         return "model-{}-{}-margin{}-P{}-loss{}-epoch{}".format(self.get_model_features(), 
             self.data["datagen_config"]["dataset"], self.data["loss"]["margin"], self.target_cod["positive"],
             self.data["loss"]["loss_function"], self.data["train"]["epochs"])
+
+    def set_model_config(self):
+        with open(self.data["model"]["model_config_path"]) as f:
+            self.model_config = yaml.load(f, Loader=yaml.FullLoader)
+            print(self.model_config)
 
     def get_model(self):
         if self.data["train"]["load_model"]:
@@ -194,22 +199,21 @@ class Workbench(object):
         return self.get_type_model()
 
     def get_type_model(self):
-        with open(self.data["model"]["model_config_path"]) as f:
-            self.model_config = yaml.load(f, Loader=yaml.FullLoader)
-            print(self.model_config)
-        if self.data["model"]["type"] == "siamese_stagenet":
+        m_type = self.model_config['name']
+        if m_type == "siamese_stagenet":
             channels = self.data["datagen_config"]["multiple_channel"]["multiple_channel_len"]
             return StageNet(self.model_config, width=self.data["tokenizer"]["window_size"],height=channels)
-        elif self.data["model"]["type"] == "siamese_conv":
+        elif m_type == "siamese_conv":
             return SiameseNetwork(self.model_config, window_size=self.data["tokenizer"]["window_size"])
-        elif self.data["model"]["type"] == "siamese_linear":
+        elif m_type == "siamese_linear":
             return SiameseLinearNetwork(self.model_config, window_size=self.data["tokenizer"]["window_size"])
-        elif self.data["model"]["type"] == "nedbert":
+        elif m_type == "nedbert":
             return NedBERT(self.model_config, sequence_lenght=self.data["tokenizer"]["window_size"])
         raise Warning("No type model found")
 
 
     def get_optimizer(self, model):
+        self.LEARNING_RATE = self.data["optimizer"]['learning_rate']
         w_decay = self.data["optimizer"]['w_decay']
         momentum = self.data["optimizer"]['momentum']
         if self.data["optimizer"]['name'] == "adam":
@@ -234,7 +238,6 @@ class Workbench(object):
         return torch.cuda.IntTensor([self.target_cod["positive"] if tensor.item() < self.margin else self.target_cod["negative"] for tensor in distances])
 
     def calcuate_metric(self, output1, output2, targets):
-        #import pdb;pdb.set_trace()
         batches = output1.size(0)
         distances = self.calculate_distance(output1, output2)
         o_labels = self.calculate_label(distances)
@@ -305,11 +308,11 @@ class Workbench(object):
         return
 
     def prepare_model(self):
+        self.model = self.get_model()
         self.model_name = self.get_model_name()
         self.folder = self.base_path
         self.ext = self.data["model"]["extention"]
         self.full_path = os.path.join(self.folder, self.model_name + self.ext)        
-        self.model = self.get_model()
         self.model.to(self.device)
         self.get_loss_function()
         self.optimizer = self.get_optimizer(self.model)
@@ -340,7 +343,7 @@ class Workbench(object):
         torch.set_grad_enabled(True)
         self.EPOCHS=self.data["train"]["epochs"]
         self.model.train()
-        self.writer = SummaryWriter()
+        self.writer = SummaryWriter(log_dir=self.plot_path)
         for epoch in range(self.EPOCHS):
             self.model_train(epoch)
             if self.data["train"]["save_each"] == "epoch":
@@ -366,18 +369,26 @@ class Workbench(object):
         return targets.unsqueeze(0)
 
 
+    def add_embedding(self, output1, output2, meta, b):
+        try:
+            self.writer.add_embedding(output1.to("cpu").detach().numpy()[b], metadata=[meta])
+            self.writer.add_embedding(output2.to("cpu").detach().numpy()[b], metadata=[meta])
+        except:
+            pass
+
     def create_test_data_output(self, df, data, output1, output2):
         #import pdb;pdb.set_trace()
         n_batch = output1.size(0)
         g_value = lambda x: x.item() if isinstance(x, torch.Tensor) else x
         for b in range(n_batch):
-            if self.data["model"]["type"] in ["siamese_conv", "siamese_linear"]:
+            if self.model_config['name'] in ["siamese_conv", "siamese_linear"]:
                 df.append({'Vector': output1.to("cpu").detach().numpy()[b], "Categ": g_value(data["output"][b]), "subject": g_value(data["subject1"][b]), "chn": g_value(data["chn1"][b]), "estimulo": g_value(data["estimulo"][b])})
                 df.append({'Vector': output2.to("cpu").detach().numpy()[b], "Categ": g_value(data["output"][b]), "subject": g_value(data["subject2"][b]), "chn": g_value(data["chn2"][b]), "estimulo": g_value(data["estimulo"][b])})
+                self.add_embedding(output1, output2, g_value(data["output"][b]), b)
             else:
                 df.append({'Vector': output1.to("cpu").detach().numpy()[b], "Categ": data["output"][b].item(), "subject": data["subjects"][0][b].item(), "chn": len(data["channels"]), "channels": [chn[b].item() for chn in data["channels"]], "estimulo": data["stimulus"][0][b].item()})
                 df.append({'Vector': output2.to("cpu").detach().numpy()[b], "Categ": data["output"][b].item(), "subject": data["subjects"][0][b].item(), "chn": len(data["channels"]), "channels": [chn[b].item() for chn in data["channels"]], "estimulo": data["stimulus"][0][b].item()})
-
+                self.add_embedding(output1, output2, data["output"][b].item(), b)
 
     def test(self):
         y_real = []
@@ -460,7 +471,7 @@ class Workbench(object):
             score_subject = silhouette_score(np.array(df.Vector.tolist()), np.array(df.subject.tolist()))
         except ValueError:
             score_subject = -999999
-        if self.data["model"]["type"] in ["siamese_conv", "siamese_linear"]:
+        if self.model_config['name'] in ["siamese_conv", "siamese_linear"]:
             try:
                 score_channel = silhouette_score(np.array(df.Vector.tolist()), np.array(df.chn.tolist()))
             except ValueError:
@@ -507,11 +518,15 @@ class Workbench(object):
 
     def plot_tsne(self, df):
         folder = self.plot_path
-        m = TSNE(n_components=3,learning_rate=50)
+        m = TSNE(n_components=3)
         tsne_features = m.fit_transform(np.array(df.Vector.tolist()))
         df["x"] = tsne_features[:,0]
         df["y"] = tsne_features[:,1]
         df["z"] = tsne_features[:,2]
+        m2d = TSNE(n_components=2)
+        tsne_features = m2d.fit_transform(np.array(df.Vector.tolist()))
+        df["x2d"] = tsne_features[:,0]
+        df["y2d"] = tsne_features[:,1]
         self.plot(folder, df, "Categ", df.Categ, "category-tsne")
         self.plot(folder, df, "subject", df.subject, "subject-tsne")
         self.plot(folder, df, "chn", df.chn, "channel-tsne")
@@ -521,26 +536,26 @@ class Workbench(object):
         return os.path.join(folder,"{}{}.png".format(base,extra))
 
     def plot(self, folder, df, hue_data, data, basename):
-        sns.scatterplot(x="x",y="y", hue=hue_data, data=df).figure.savefig(self.get_plot_name(folder,basename,""))
+        #sns.scatterplot(x="x",y="y", hue=hue_data, data=df).figure.savefig(self.get_plot_name(folder,basename,""))
         px.scatter_3d(df, x='x', y='y', z='z', color=data).write_image(self.get_plot_name(folder,basename,"3d"))
-        px.scatter(df, x='x', y='y',color=data).write_image(self.get_plot_name(folder,basename,"2d"))
+        px.scatter(df, x='x2d', y='y2d', color=data).write_image(self.get_plot_name(folder,basename,"2d"))
 
     def plot_channels(self, folder, df):
-        sns.scatterplot(x="x",y="y", hue="chn", data=df).savefig(os.path.join(folder,"channel.png"))
+        #sns.scatterplot(x="x",y="y", hue="chn", data=df).savefig(os.path.join(folder,"channel.png"))
         fig3 = px.scatter_3d(df, x='x', y='y', z='z',color=df.chn)
         fig3_2d = px.scatter(df, x='x', y='y',color=df.chn)
         fig3_2d.write_image(os.path.join(folder,"channel2d.png"))
         fig3.write_image(os.path.join(folder,"channel3d.png"))
 
     def plot_subject(self, folder, df):
-        sns.scatterplot(x="x",y="y", hue="subject", data=df).savefig(os.path.join(folder,"subject.png"))
+        #sns.scatterplot(x="x",y="y", hue="subject", data=df).savefig(os.path.join(folder,"subject.png"))
         fig2 = px.scatter_3d(df, x='x', y='y', z='z',color=df.subject)
         fig2_2d = px.scatter(df, x='x', y='y',color=df.subject)
         fig2_2d.write_image(os.path.join(folder,"subject2d.png"))
         fig2.write_image(os.path.join(folder,"subject3d.png"))
 
     def plot_category(self, folder, df):
-        sns.scatterplot(x="x",y="y", hue="Categ", data=df).savefig(os.path.join(folder,"category.png"))
+        #sns.scatterplot(x="x",y="y", hue="Categ", data=df).savefig(os.path.join(folder,"category.png"))
         fig = px.scatter_3d(df, x='x', y='y', z='z',color=df.Categ)
         fig_2d = px.scatter(df, x='x', y='y', color=df.Categ)
         fig_2d.write_image(os.path.join(folder,"category2d.png"))
@@ -560,6 +575,7 @@ class Workbench(object):
         
 
     def run(self):
+        self.set_model_config()
         branch = "emotion_neural_interface_{}_dev-{}_{}".format(self.get_model_name(),self.data["github"]["dev"], datetime.now().timestamp())
         self.data["branch"] = branch
         self.set_folders(branch)

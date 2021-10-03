@@ -1,4 +1,4 @@
-name: "siamese_conv1d"
+name: "siamese_conv"
 layers:
   conv1d1:
     channels_out: 16

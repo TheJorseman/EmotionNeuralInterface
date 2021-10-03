@@ -1,4 +1,4 @@
-name: "NedBERT"
+name: "nedbert"
 d_model: 1024
 spatial_conv:
     channels_out: 1024
