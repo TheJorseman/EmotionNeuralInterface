@@ -283,7 +283,7 @@ class Workbench(object):
             if n % 10000 == 0:
                 break
             n += 1
-        print ("Accuracy: {}", n_correct/examples)
+        print ("Accuracy: ", n_correct/examples)
         logging.info("Acc {}".format((n_correct/examples)*100))
         self.writer.add_scalar("Accuracy/Validation", n_correct/examples, epoch)
         return
@@ -317,8 +317,8 @@ class Workbench(object):
             print("Target ")
             logging.info(str(target))
             print(target)
-            logging.info("Acc ".format((n_correct/examples)*100))
-            print("Acc {}", (n_correct/examples)*100)
+            logging.info("Acc {}".format((n_correct/examples)*100))
+            print("Acc ", (n_correct/examples)*100)
             self.writer.add_scalar("Accuracy/train", (n_correct/examples)*100, epoch)
             n += 1
         return
