@@ -249,7 +249,9 @@ class Workbench(object):
         distances = self.calculate_distance(output1, output2)
         o_labels = self.calculate_label(distances)
         print("Predicted Labels")
+        logging.info("Predicted Labels")
         print(o_labels)
+        logging.info(str(o_labels))
         n_correct = (o_labels==targets).sum().item()
         return n_correct
     
@@ -282,7 +284,7 @@ class Workbench(object):
                 break
             n += 1
         print ("Accuracy: {}", n_correct/examples)
-        logging.info("Acc ".format((n_correct/examples)*100))
+        logging.info("Acc {}".format((n_correct/examples)*100))
         self.writer.add_scalar("Accuracy/Validation", n_correct/examples, epoch)
         return
 
