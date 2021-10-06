@@ -281,7 +281,7 @@ class Workbench(object):
             if n % 10000 == 0:
                 break
             n += 1
-        print ("Accuracy: ", n_correct/examples)
+        print ("Accuracy: {}", n_correct/examples)
         logging.info("Acc ".format((n_correct/examples)*100))
         self.writer.add_scalar("Accuracy/Validation", n_correct/examples, epoch)
         return
@@ -316,7 +316,7 @@ class Workbench(object):
             logging.info(str(target))
             print(target)
             logging.info("Acc ".format((n_correct/examples)*100))
-            print("Acc ", (n_correct/examples)*100)
+            print("Acc {}", (n_correct/examples)*100)
             self.writer.add_scalar("Accuracy/train", (n_correct/examples)*100, epoch)
             n += 1
         return
@@ -425,7 +425,7 @@ class Workbench(object):
             y_predict += [label.item() for label in labels_predict]
             n_correct += self.calcuate_metric(output1, output2, targets)
             examples += self.get_num_samples(targets)
-            logging.info("Acc ".format((n_correct/examples)*100))
+            logging.info("Acc {}".format((n_correct/examples)*100))
             print("Acc ".format((n_correct/examples)*100))
             self.create_test_data_output(df, data, output1, output2)
             logging.info("Completado: " + str(i))
