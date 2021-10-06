@@ -51,8 +51,15 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
 from umap import UMAP
-
 #seed(27)
+import logging
+
+logging.basicConfig(
+    format = '%(asctime)-5s %(name)-15s %(levelname)-8s %(message)s',
+    level  = logging.INFO,      
+    filename = "emotional_neural_interface_logs_info.log", 
+    filemode = "a"                      
+)
 
 class Workbench(object):
     def __init__(self, config_file):
@@ -275,6 +282,7 @@ class Workbench(object):
                 break
             n += 1
         print ("Accuracy: ", n_correct/examples)
+        logging.info("Acc ".format((n_correct/examples)*100))
         self.writer.add_scalar("Accuracy/Validation", n_correct/examples, epoch)
         return
 
@@ -293,15 +301,21 @@ class Workbench(object):
             self.optimizer.zero_grad()
             loss_contrastive.backward()
             self.optimizer.step()
+            logging.info("Epoch {} Current loss {}\n".format(epoch,loss_contrastive.item()))
             print("Epoch {} Current loss {}\n".format(epoch,loss_contrastive.item()))
             self.writer.add_scalar("Loss/train", loss_contrastive.item(), epoch)
             _distance = distance(output1, output2)
             n_correct += self.calcuate_metric(output1, output2, target)
             examples += target.size(0)
+            logging.info("Distance")
             print("Distance ")
+            logging.info(str(_distance))
             print(_distance)
+            logging.info("Target ")
             print("Target ")
+            logging.info(str(target))
             print(target)
+            logging.info("Acc ".format((n_correct/examples)*100))
             print("Acc ", (n_correct/examples)*100)
             self.writer.add_scalar("Accuracy/train", (n_correct/examples)*100, epoch)
             n += 1
@@ -411,8 +425,10 @@ class Workbench(object):
             y_predict += [label.item() for label in labels_predict]
             n_correct += self.calcuate_metric(output1, output2, targets)
             examples += self.get_num_samples(targets)
-            print("Acc= ", n_correct/examples)
+            logging.info("Acc ".format((n_correct/examples)*100))
+            print("Acc ".format((n_correct/examples)*100))
             self.create_test_data_output(df, data, output1, output2)
+            logging.info("Completado: " + str(i))
             print("Completado: ", i)
             i += 1
         return y_real, y_predict, y_distance, DataFrame.from_dict(df)

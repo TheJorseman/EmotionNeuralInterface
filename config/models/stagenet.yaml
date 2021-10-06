@@ -20,7 +20,7 @@ layers:
     stride: 1
     maxpool:
       kernel: [1,2]
-      stride: [1,2]
+      stride: [1,1]
     act_fn: "relu"
     dropout: 0.2
     batch_normalization: True
@@ -40,7 +40,7 @@ layers:
     stride: 1
     maxpool:
       kernel: [1,2]
-      stride: [1,2]
+      stride: [1,1]
     act_fn: "relu"
     dropout: 0.2
     batch_normalization: True
