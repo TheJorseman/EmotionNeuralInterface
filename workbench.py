@@ -53,6 +53,7 @@ import plotly.express as px
 from umap import UMAP
 #seed(27)
 import logging
+from pathlib import Path
 
 logging.basicConfig(
     format = '%(asctime)-5s %(name)-15s %(levelname)-8s %(message)s',
@@ -200,9 +201,23 @@ class Workbench(object):
             self.model_config = yaml.load(f, Loader=yaml.FullLoader)
             print(self.model_config)
 
+    def get_model_path(self, path):
+        if path == 'last':
+            path = self.data['model']['folder_save']
+            folder = sorted(Path(path).iterdir(), key=os.path.getmtime)[-1]
+            model = sorted(Path(folder).iterdir(), key=os.path.getmtime)[-1]
+            return model
+        elif path.endswith("pt"):
+            return path
+        elif os.path.isdir(path):
+            model = sorted(Path(path).iterdir(), key=os.path.getmtime)[-1]
+            return self.get_model_path(model)
+        return path
+
+
     def get_model(self):
         if self.data["train"]["load_model"]:
-            return torch.load(self.data["train"]["load_model_name"])
+            return torch.load(self.get_model_path(self.data["train"]["load_model_name"]))
         return self.get_type_model()
 
     def get_type_model(self):
