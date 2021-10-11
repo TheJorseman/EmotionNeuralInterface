@@ -1,0 +1,2 @@
+umap-learn==0.5.1
+pytorch-metric-learning==0.9.99
