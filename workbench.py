@@ -204,7 +204,7 @@ class Workbench(object):
     def get_model_path(self, path):
         if path == 'last':
             path = self.data['model']['folder_save']
-            folder = sorted(Path(path).iterdir(), key=os.path.getmtime)[-1]
+            folder = sorted(Path(path).iterdir(), key=os.path.getmtime)[-2]
             model = sorted(Path(folder).iterdir(), key=os.path.getmtime)[-1]
             return model
         elif path.endswith("pt"):
