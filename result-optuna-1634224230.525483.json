@@ -1,0 +1,1 @@
+{"model": "linear", "epochs": 10, "batch_size": 74, "learning_rate": 0.0022072409132025098, "margin": 3.7574958945875085, "optimizer": "adam", "stride": 64, "task": "same_channel_single_channel", "window_size": 1664}

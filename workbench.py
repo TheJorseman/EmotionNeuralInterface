@@ -51,7 +51,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
 from umap import UMAP
-#seed(27)
+seed(27)
 import logging
 from pathlib import Path
 
@@ -64,9 +64,15 @@ logging.basicConfig(
 
 class Workbench(object):
     def __init__(self, config_file):
-        with open(config_file) as f:
-            self.data = yaml.load(f, Loader=yaml.FullLoader)
-            print(self.data)
+        if isinstance(config_file, str):
+            with open(config_file) as f:
+                self.data = yaml.load(f, Loader=yaml.FullLoader)
+                print(self.data)
+        elif isinstance(config_file, dict):
+            self.data = config_file
+        else:
+            raise Warning("Type of file not valid")
+        print(self.data)
         self.device = 'cuda' if cuda.is_available() else 'cpu'
         torch.set_grad_enabled(False)
         self.model_config = {}
@@ -206,6 +212,7 @@ class Workbench(object):
             path = self.data['model']['folder_save']
             folder = sorted(Path(path).iterdir(), key=os.path.getmtime)[-2]
             model = sorted(Path(folder).iterdir(), key=os.path.getmtime)[-1]
+            print("Loaded model ",model)
             return model
         elif path.endswith("pt"):
             return path
@@ -242,7 +249,7 @@ class Workbench(object):
             return torch.optim.Adam(model.parameters(), lr=self.LEARNING_RATE, weight_decay=w_decay)
         elif self.data["optimizer"]['name'] == "sgd":
             return torch.optim.SGD(model.parameters(), lr=self.LEARNING_RATE, weight_decay=w_decay, momentum=momentum)
-        raise Warning("No optimizer")
+        raise Warning("No optimizer " + self.data["optimizer"]['name'])
 
 
     def calculate_distance(self, output1, output2):
@@ -343,7 +350,7 @@ class Workbench(object):
         self.model_name = self.get_model_name()
         self.folder = self.base_path
         self.ext = self.data["model"]["extention"]
-        self.full_path = os.path.join(self.folder, self.model_name + self.ext)        
+        self.full_path = os.path.join(self.folder, self.model_name + '.' + self.ext)        
         self.model.to(self.device)
         self.get_loss_function()
         self.optimizer = self.get_optimizer(self.model)
@@ -370,19 +377,21 @@ class Workbench(object):
 
     def train(self):
         #import pdb;pdb.set_trace()
-        self.prepare_model()
         torch.set_grad_enabled(True)
         self.EPOCHS=self.data["train"]["epochs"]
         self.model.train()
-        self.writer = SummaryWriter(log_dir=self.plot_path)
+        log_dir = self.plot_path if self.save else 'runs'
+        self.writer = SummaryWriter(log_dir=log_dir)
         for epoch in range(self.EPOCHS):
             self.model_train(epoch)
             if self.data["train"]["save_each"] == "epoch":
-                torch.save(self.model, "{}/{}-epoch-{}.{}".format(self.folder, self.model_name, epoch, self.ext))
-                print("Model Saved Successfully")
+                if self.save:
+                    torch.save(self.model, "{}/{}-epoch-{}.{}".format(self.folder, self.model_name, epoch, self.ext))
+                    print("Model Saved Successfully")
             if self.data["validation"]["use_each"] == "epoch":
                 self.evaluate_model(epoch)
-        torch.save(self.model, self.full_path)
+        if self.save:
+            torch.save(self.model, self.full_path)
 
     def get_real_label(self, targets):
         if len(targets.shape) == 1:
@@ -399,11 +408,9 @@ class Workbench(object):
             return targets
         return targets.unsqueeze(0)
 
-
-    def add_embedding(self, output1, output2, meta, b):
+    def add_embedding(self, embeddings, class_label):
         try:
-            self.writer.add_embedding(output1.to("cpu").detach().numpy()[b], metadata=[meta])
-            self.writer.add_embedding(output2.to("cpu").detach().numpy()[b], metadata=[meta])
+            self.writer.add_embedding(embeddings, metadata=class_label)
         except:
             pass
 
@@ -415,11 +422,11 @@ class Workbench(object):
             if self.model_config['name'] in ["siamese_conv", "siamese_linear"]:
                 df.append({'Vector': output1.to("cpu").detach().numpy()[b], "Categ": g_value(data["output"][b]), "subject": g_value(data["subject1"][b]), "chn": g_value(data["chn1"][b]), "estimulo": g_value(data["estimulo"][b])})
                 df.append({'Vector': output2.to("cpu").detach().numpy()[b], "Categ": g_value(data["output"][b]), "subject": g_value(data["subject2"][b]), "chn": g_value(data["chn2"][b]), "estimulo": g_value(data["estimulo"][b])})
-                self.add_embedding(output1, output2, g_value(data["output"][b]), b)
+                #self.add_embedding(output1, output2, g_value(data["output"][b]), b)
             else:
                 df.append({'Vector': output1.to("cpu").detach().numpy()[b], "Categ": data["output"][b].item(), "subject": data["subjects"][0][b].item(), "chn": len(data["channels"]), "channels": [chn[b].item() for chn in data["channels"]], "estimulo": data["stimulus"][0][b].item()})
                 df.append({'Vector': output2.to("cpu").detach().numpy()[b], "Categ": data["output"][b].item(), "subject": data["subjects"][0][b].item(), "chn": len(data["channels"]), "channels": [chn[b].item() for chn in data["channels"]], "estimulo": data["stimulus"][0][b].item()})
-                self.add_embedding(output1, output2, data["output"][b].item(), b)
+                #self.add_embedding(output1, output2, data["output"][b].item(), b)
 
     def test(self):
         y_real = []
@@ -443,35 +450,48 @@ class Workbench(object):
             n_correct += self.calcuate_metric(output1, output2, targets)
             examples += self.get_num_samples(targets)
             logging.info("Acc {}".format((n_correct/examples)*100))
-            print("Acc ".format((n_correct/examples)*100))
+            print("Acc {}".format((n_correct/examples)*100))
             self.create_test_data_output(df, data, output1, output2)
             logging.info("Completado: " + str(i))
             print("Completado: ", i)
             i += 1
+        self.test_accuracy = (n_correct/examples)
         return y_real, y_predict, y_distance, DataFrame.from_dict(df)
+
+    def save_crosstab(self, Y_V, Y_P):
+        confusion_matrix = crosstab(Y_V, Y_P, rownames=['Real'], colnames=['Predicción'])
+        confusion_matrix.to_csv(os.path.join(self.plot_path, "crosstab.txt"), header=None, index=None, mode='w')
+
+    def save_classification_report(self, Y_V, Y_P):
+        class_report = classification_report(Y_V, Y_P)
+        report = open(os.path.join(self.plot_path,"report.txt"),"w")
+        report.write(class_report)
+        report.close()
 
     def gen_model_reports(self, y_real, y_predict, y_distance, df):
         Y_P = np.array(y_predict)
         Y_V = np.array(y_real)
-        confusion_matrix = crosstab(Y_P, Y_V, rownames=['Real'], colnames=['Predicción'])
-        class_report = classification_report(Y_V, Y_P)
+        self.save_crosstab(Y_V, Y_P)
         folder = self.plot_path
-        report = open(os.path.join(folder,"report.txt"),"w")
-        report.write(class_report)
-        report.close()
-        #import pdb;pdb.set_trace()
+        self.save_classification_report(Y_V, Y_P)
         frac = self.data["test"]["dataset_frac"]
+        self.add_embeddings(df)
         # TSNE
         df_plot = df.sample(frac=frac)
-        df_plot = df 
+        #df_plot = df
         self.plot_tsne(df_plot)
         #UMAP
         self.plot_umap_proc(df_plot)
         #self.save_test_data(df)
         self.get_silhouette_result(df)
-        self.get_data_model_report()
         return
-    
+
+    def add_embeddings(self, df_plot):
+        self.add_embedding(np.array(df_plot.Vector.tolist()), df_plot.Categ)
+        self.add_embedding(np.array(df_plot.Vector.tolist()), df_plot.subject)
+        self.add_embedding(np.array(df_plot.Vector.tolist()), df_plot.chn)
+        self.add_embedding(np.array(df_plot.Vector.tolist()), df_plot.estimulo)
+
     def get_data_model_report(self):
         folder = self.plot_path
         report = open(os.path.join(folder,"data-model.txt"),"w")
@@ -535,8 +555,8 @@ class Workbench(object):
 
     def plot_umap_proc(self, df):
         folder = self.plot_path
-        umap_2d = UMAP(n_components=2, init='random', random_state=0)
-        umap_3d = UMAP(n_components=3, init='random', random_state=0)
+        umap_2d = UMAP(n_components=2, spread=1, min_dist=0.5, a=0.7, b=1.2)
+        umap_3d = UMAP(n_components=3, spread=1, min_dist=0.5, a=0.7, b=1.2)
         proj_2d = umap_2d.fit_transform(np.array(df.Vector.tolist()))
         proj_3d = umap_3d.fit_transform(np.array(df.Vector.tolist()))
         self.plot_umap(folder,proj_2d,proj_3d,df.Categ,"Categ","category-umap")
@@ -551,12 +571,13 @@ class Workbench(object):
 
     def plot_tsne(self, df):
         folder = self.plot_path
-        m = TSNE(n_components=3)
+        perplexity_heu = int(np.sqrt(df.shape[0]))
+        m = TSNE(n_components=3, perplexity=perplexity_heu, n_iter=1000)
         tsne_features = m.fit_transform(np.array(df.Vector.tolist()))
         df["x"] = tsne_features[:,0]
         df["y"] = tsne_features[:,1]
         df["z"] = tsne_features[:,2]
-        m2d = TSNE(n_components=2)
+        m2d = TSNE(n_components=2, perplexity=perplexity_heu, n_iter=1000)
         tsne_features = m2d.fit_transform(np.array(df.Vector.tolist()))
         df["x2d"] = tsne_features[:,0]
         df["y2d"] = tsne_features[:,1]
@@ -607,37 +628,42 @@ class Workbench(object):
             yaml.dump(self.model_config , outfile, default_flow_style=False)        
         
 
+    def run_optuna(self):
+        self.save = False
+        self.set_model_config()
+        self.model = self.get_model()     
+        self.model.to(self.device)
+        self.get_loss_function()
+        self.optimizer = self.get_optimizer(self.model)
+        self.train()
+        self.model.eval()
+        y_real, y_predict, y_distance, df =self.test()    
+
     def run(self):
+        self.save = True
         self.set_model_config()
         branch = "emotion_neural_interface_{}_dev-{}_{}".format(self.get_model_name(),self.data["github"]["dev"], datetime.now().timestamp())
         self.data["branch"] = branch
         self.set_folders(branch)
-        command = "git checkout -b {}".format(branch)
-        os.system(command)
+        self.save_yaml_conf()
+        self.prepare_model()
+        self.get_data_model_report()
         self.train()
         self.model.eval()
         y_real, y_predict, y_distance, df =self.test()
         self.gen_model_reports(y_real, y_predict, y_distance, df)
-        self.save_yaml_conf()
-        os.system("git add .")
-        os.system("git commit -m 'Se agrega el experimento'")
-        os.system("git checkout main")
 
     def run_test(self):
         branch = "emotion_neural_interface_{}_dev-{}_{}".format(self.get_model_name(),self.data["github"]["dev"], datetime.now().timestamp())
         self.data["branch"] = branch
         self.set_folders(branch)
-        command = "git checkout -b {}".format(branch)
-        os.system(command)
+        self.save_yaml_conf()
         self.prepare_model()
+        self.get_data_model_report()
         self.model.eval()
         y_real, y_predict, y_distance, df =self.test()
         self.gen_model_reports(y_real, y_predict, y_distance, df)
-        self.save_yaml_conf()
-        os.system("git add .")
-        os.system('git commit -m "Se agrega el experimento"')
-        os.system("git checkout main")    
         return
     
-exp = Workbench("config/config.yaml")
-exp.run()
+#exp = Workbench("config/config.yaml")
+#exp.run()

@@ -11,7 +11,7 @@ layers:
       kernel: [1,2]
       stride: [1,2]
     #act_fn: "gelu"
-    act_fn: "relu"
+    act_fn: "gelu"
     dropout: 0.2
     batch_normalization: True
   conv2d2:
@@ -21,7 +21,7 @@ layers:
     maxpool:
       kernel: [1,2]
       stride: [1,1]
-    act_fn: "relu"
+    act_fn: "gelu"
     dropout: 0.2
     batch_normalization: True
   conv2d3:
@@ -31,7 +31,7 @@ layers:
     maxpool:
       kernel: [1,2]
       stride: [1,2]
-    act_fn: "relu"
+    act_fn: "gelu"
     dropout: 0.2
     batch_normalization: True
   conv2d4:
@@ -41,12 +41,12 @@ layers:
     maxpool:
       kernel: [1,2]
       stride: [1,1]
-    act_fn: "relu"
+    act_fn: "gelu"
     dropout: 0.2
     batch_normalization: True
   linear1:
     output_dim: 512
-    act_fn: "relu"
+    act_fn: "gelu"
     dropout: 0.2
     batch_normalization: True
 dropout: 0.3

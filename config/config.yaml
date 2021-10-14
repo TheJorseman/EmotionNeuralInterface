@@ -2,8 +2,8 @@ dataset:
   #dataset_path: "C:/Users/migue/Documents/GitHub/Datasets/Experimento"
   dataset_path: "https://drive.google.com/file/d/1Dd0JwaCvY62OtkQD4Ff5kI-_RQzFxOpH/view"
 tokenizer:
-  window_size: 256
-  stride: 128
+  window_size: 1024
+  stride: 64
 dataset_subjects:
   train_subjects: 14
   test_subjects: 3
@@ -14,12 +14,12 @@ datagen_config:
   target_codification:
     positive: 1
     negative: 0
-  #dataset: "same_channel_single_channel"
+  dataset: "same_channel_single_channel"
   #dataset: "same_subject_single_channel"
   #dataset: "consecutive_single_channel"
   #dataset: "temporal_shifting_multiple_channel"
-  dataset: "relative_positioning_multiple_channel"
-  dataset_train_len: 1200000
+  #dataset: "relative_positioning_multiple_channel"
+  dataset_train_len: 700000
   dataset_test_len: 200000
   dataset_validation_len: 100000
   # Multiple Channel Config
@@ -33,15 +33,15 @@ datagen_config:
   subjects_overfitting: 2
   train_dataset_len: 50
 dataset_batch:
-  train_batch_size: 80
+  train_batch_size: 77
   validation_batch_size: 64
   test_batch_size: 2
 model:
   folder_save: "models"
   extention: "pt"
-  #model_config_path: "config/models/linear.yaml"
+  model_config_path: "config/models/linear.yaml"
   #model_config_path: "config/models/conv1d.yaml"
-  model_config_path: "config/models/stagenet.yaml"
+  #model_config_path: "config/models/stagenet.yaml"
   #model_config_path: "config/models/nedbert.yaml"
 loss:
   #loss_function: "contrastive_loss_custom"
@@ -50,16 +50,16 @@ loss:
   #loss_function: "CosineEmbeddingLoss"
   #loss_function: "NTXentLoss"
   temperature: 0.5
-  margin: 0.6
+  margin: 3.876866001617598
 optimizer: 
   name: "adam"
-  learning_rate: 0.00005
+  learning_rate: 0.00011925341317048371
   w_decay: 0.0001
   momentum: 0.9
 train:
-  load_model: True
+  load_model: False
   load_model_name: "last"
-  epochs: 50
+  epochs: 30
   save_each: "epoch"
   #save_each: "100-iter"
 validation:
