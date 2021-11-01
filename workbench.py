@@ -51,9 +51,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
 from umap import UMAP
-seed(27)
+#seed(27)
 import logging
 from pathlib import Path
+import psutil
+
+MEMORY_LIMIT = 95
+
 
 logging.basicConfig(
     format = '%(asctime)-5s %(name)-15s %(levelname)-8s %(message)s',
@@ -81,6 +85,10 @@ class Workbench(object):
         self.dataset_subjects()
         self.datagen_config()
         self.load_dataset_batch()
+        self.train_accuracy = 0
+        self.dA_train = 0
+        self.evaluation_accuracy = 0
+        self.dA_eval = 0
     
     def load_dataset(self):
         path = get_path(self.data["dataset"]["dataset_path"])
@@ -178,7 +186,7 @@ class Workbench(object):
 
         train_params = {'batch_size': self.TRAIN_BATCH_SIZE,
                         'shuffle': True,
-                        'num_workers': 0
+                        'num_workers': 2
                         }
 
         validation_params = {'batch_size': self.VALID_BATCH_SIZE,
@@ -203,9 +211,15 @@ class Workbench(object):
             self.data["loss"]["loss_function"], self.data["train"]["epochs"])
 
     def set_model_config(self):
-        with open(self.data["model"]["model_config_path"]) as f:
-            self.model_config = yaml.load(f, Loader=yaml.FullLoader)
-            print(self.model_config)
+        config_file = self.data["model"]["model_config_path"]
+        if isinstance(config_file, str):
+            with open(config_file) as f:
+                self.data = yaml.load(f, Loader=yaml.FullLoader)
+                print(self.data)
+        elif isinstance(config_file, dict):
+            self.data = config_file
+        else:
+            raise Warning("Type of file not valid")
 
     def get_model_path(self, path):
         if path == 'last':
@@ -299,18 +313,23 @@ class Workbench(object):
             target = data["output"].to(self.device)
             output1, output2 = self.model(input1, input2)
             loss_contrastive = self.loss_function(output1, output2, target.unsqueeze(1))
-            distance = self.calculate_distance(output1, output2)
+            #distance = self.calculate_distance(output1, output2)
             n_correct += self.calcuate_metric(output1, output2, target)
             examples += target.size(0)
-            if n % 10000 == 0:
+            if n % 50000 == 0:
                 break
             n += 1
-        print ("Accuracy: ", n_correct/examples)
+        accuracy = n_correct/examples
+        self.dA_eval = accuracy - self.dA_eval
+        self.evaluation_accuracy = accuracy
+        print ("Accuracy: {}", n_correct/examples)
         logging.info("Acc {}".format((n_correct/examples)*100))
         self.writer.add_scalar("Accuracy/Validation", n_correct/examples, epoch)
+        torch.cuda.empty_cache()
         return
 
     def model_train(self, epoch):
+        #print("Memory Model Used ", torch.cuda.memory_allocated(0)/1e+6)
         n = 1
         n_correct = 0
         examples = 0
@@ -343,6 +362,9 @@ class Workbench(object):
             print("Acc ", (n_correct/examples)*100)
             self.writer.add_scalar("Accuracy/train", (n_correct/examples)*100, epoch)
             n += 1
+        accuracy = n_correct/examples
+        self.dA_train = accuracy - self.dA_train
+        self.train_accuracy = accuracy
         return
 
     def prepare_model(self):
@@ -376,12 +398,12 @@ class Workbench(object):
             raise Warning("No loss function")
 
     def train(self):
-        #import pdb;pdb.set_trace()
         torch.set_grad_enabled(True)
         self.EPOCHS=self.data["train"]["epochs"]
         self.model.train()
         log_dir = self.plot_path if self.save else 'runs'
         self.writer = SummaryWriter(log_dir=log_dir)
+        torch.cuda.empty_cache()
         for epoch in range(self.EPOCHS):
             self.model_train(epoch)
             if self.data["train"]["save_each"] == "epoch":
@@ -389,6 +411,7 @@ class Workbench(object):
                     torch.save(self.model, "{}/{}-epoch-{}.{}".format(self.folder, self.model_name, epoch, self.ext))
                     print("Model Saved Successfully")
             if self.data["validation"]["use_each"] == "epoch":
+                torch.cuda.empty_cache()
                 self.evaluate_model(epoch)
         if self.save:
             torch.save(self.model, self.full_path)
@@ -431,19 +454,16 @@ class Workbench(object):
     def test(self):
         y_real = []
         y_predict = []
-        y_distance = []
         n_correct = 0
         examples = 0
         df = list()
-        datalen = len(self.training_set)
-        i = 1
+        datalen = len(self.testing_set)
         for _,data in enumerate(self.testing_loader, 0):
             input1 = data["input1"].to(self.device)
             input2 = data["input2"].to(self.device)
             targets = torch.squeeze(data["output"],0).to(self.device)
             output1, output2 = self.model(input1, input2)
             loss_contrastive = self.loss_function(output1, output2, targets)
-            #eucledian_distance = F.pairwise_distance(output1, output2)
             y_real += self.get_real_label(targets)
             labels_predict = self.calculate_label(self.calculate_distance(output1, output2))
             y_predict += [label.item() for label in labels_predict]
@@ -451,16 +471,40 @@ class Workbench(object):
             examples += self.get_num_samples(targets)
             logging.info("Acc {}".format((n_correct/examples)*100))
             print("Acc {}".format((n_correct/examples)*100))
+            if psutil.virtual_memory()[2] > MEMORY_LIMIT:
+                print("Memory is full")
+                break
             self.create_test_data_output(df, data, output1, output2)
-            logging.info("Completado: " + str(i))
-            print("Completado: ", i)
-            i += 1
+            logging.info("Completado: " + str((examples/datalen)*100))
+            print("Completado: ", (examples/datalen)*100)
         self.test_accuracy = (n_correct/examples)
-        return y_real, y_predict, y_distance, DataFrame.from_dict(df)
+        torch.cuda.empty_cache()
+        return y_real, y_predict, DataFrame.from_dict(df)
+
+    def test_optuna(self):
+        n_correct = 0
+        examples = 0
+        datalen = len(self.testing_set)
+        for _,data in enumerate(self.testing_loader, 0):
+            input1 = data["input1"].to(self.device)
+            input2 = data["input2"].to(self.device)
+            targets = torch.squeeze(data["output"],0).to(self.device)
+            output1, output2 = self.model(input1, input2)
+            loss_contrastive = self.loss_function(output1, output2, targets)
+            n_correct += self.calcuate_metric(output1, output2, targets)
+            examples += self.get_num_samples(targets)
+            logging.info("Acc {}".format((n_correct/examples)*100))
+            print("Acc {}".format((n_correct/examples)*100))
+            #self.create_test_data_output(df, data, output1, output2)
+            logging.info("Completado: " + str((examples/datalen)*100))
+            print("Completado: ", (examples/datalen)*100)
+        self.test_accuracy = (n_correct/examples)
+        torch.cuda.empty_cache()
+        return   
 
     def save_crosstab(self, Y_V, Y_P):
         confusion_matrix = crosstab(Y_V, Y_P, rownames=['Real'], colnames=['Predicción'])
-        confusion_matrix.to_csv(os.path.join(self.plot_path, "crosstab.txt"), header=None, index=None, mode='w')
+        confusion_matrix.to_csv(os.path.join(self.plot_path, "crosstab.csv"), mode='w')
 
     def save_classification_report(self, Y_V, Y_P):
         class_report = classification_report(Y_V, Y_P)
@@ -475,7 +519,7 @@ class Workbench(object):
         folder = self.plot_path
         self.save_classification_report(Y_V, Y_P)
         frac = self.data["test"]["dataset_frac"]
-        self.add_embeddings(df)
+        #self.add_embeddings(df)
         # TSNE
         df_plot = df.sample(frac=frac)
         #df_plot = df
@@ -572,15 +616,15 @@ class Workbench(object):
     def plot_tsne(self, df):
         folder = self.plot_path
         perplexity_heu = int(np.sqrt(df.shape[0]))
-        m = TSNE(n_components=3, perplexity=perplexity_heu, n_iter=1000)
+        m = TSNE(n_components=3, perplexity=perplexity_heu, n_iter=1000, n_jobs=-1)
         tsne_features = m.fit_transform(np.array(df.Vector.tolist()))
         df["x"] = tsne_features[:,0]
         df["y"] = tsne_features[:,1]
         df["z"] = tsne_features[:,2]
-        m2d = TSNE(n_components=2, perplexity=perplexity_heu, n_iter=1000)
-        tsne_features = m2d.fit_transform(np.array(df.Vector.tolist()))
-        df["x2d"] = tsne_features[:,0]
-        df["y2d"] = tsne_features[:,1]
+        #m2d = TSNE(n_components=2, perplexity=perplexity_heu, n_iter=1000)
+        #tsne_features = m2d.fit_transform(np.array(df.Vector.tolist()))
+        #df["x2d"] = tsne_features[:,0]
+        #df["y2d"] = tsne_features[:,1]
         self.plot(folder, df, "Categ", df.Categ, "category-tsne")
         self.plot(folder, df, "subject", df.subject, "subject-tsne")
         self.plot(folder, df, "chn", df.chn, "channel-tsne")
@@ -592,7 +636,7 @@ class Workbench(object):
     def plot(self, folder, df, hue_data, data, basename):
         #sns.scatterplot(x="x",y="y", hue=hue_data, data=df).figure.savefig(self.get_plot_name(folder,basename,""))
         px.scatter_3d(df, x='x', y='y', z='z', color=data).write_image(self.get_plot_name(folder,basename,"3d"))
-        px.scatter(df, x='x2d', y='y2d', color=data).write_image(self.get_plot_name(folder,basename,"2d"))
+        px.scatter(df, x='x', y='y', color=data).write_image(self.get_plot_name(folder,basename,"2d"))
 
     def plot_channels(self, folder, df):
         #sns.scatterplot(x="x",y="y", hue="chn", data=df).savefig(os.path.join(folder,"channel.png"))
@@ -637,7 +681,12 @@ class Workbench(object):
         self.optimizer = self.get_optimizer(self.model)
         self.train()
         self.model.eval()
-        y_real, y_predict, y_distance, df =self.test()    
+        _, _, _, _ =self.test_optuna()
+
+    def save_model(self, folder, name="checkpoint"):
+        if not os.path.exists(folder):
+            os.mkdir(folder)
+        torch.save(self.model, "{}/{}.{}".format(folder, name, self.data["model"]["extention"]))
 
     def run(self):
         self.save = True
@@ -650,8 +699,8 @@ class Workbench(object):
         self.get_data_model_report()
         self.train()
         self.model.eval()
-        y_real, y_predict, y_distance, df =self.test()
-        self.gen_model_reports(y_real, y_predict, y_distance, df)
+        y_real, y_predict, df =self.test()
+        self.gen_model_reports(y_real, y_predict, df)
 
     def run_test(self):
         branch = "emotion_neural_interface_{}_dev-{}_{}".format(self.get_model_name(),self.data["github"]["dev"], datetime.now().timestamp())
@@ -661,8 +710,8 @@ class Workbench(object):
         self.prepare_model()
         self.get_data_model_report()
         self.model.eval()
-        y_real, y_predict, y_distance, df =self.test()
-        self.gen_model_reports(y_real, y_predict, y_distance, df)
+        y_real, y_predict, df =self.test()
+        self.gen_model_reports(y_real, y_predict, df)
         return
     
 #exp = Workbench("config/config.yaml")
