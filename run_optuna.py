@@ -52,7 +52,9 @@ def get_task(trial, key_model):
 
 def get_embedding_dim(trial, key_model, data_model):
     if key_model in ['linear','conv1d', 'conv2d']:
-        data_model['layers'][-1]['output_dim'] = trial.suggest_int('embedding_dim', 64, 1024, step=64)
+        layers = [key for key in data_model['layers'].keys() if 'linear' in key]
+        last_key = sorted(layers)[-1]
+        data_model['layers'][last_key]['output_dim'] = trial.suggest_int('embedding_dim', 64, 1024, step=64)
 
 
 
