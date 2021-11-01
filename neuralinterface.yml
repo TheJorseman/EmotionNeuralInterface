@@ -15,22 +15,30 @@ dependencies:
   - blas=1.0
   - blinker=1.4
   - brotlipy=0.7.0
-  - ca-certificates=2021.7.5
+  - ca-certificates=2021.10.8
   - cachetools=4.2.1
-  - certifi=2020.12.5
+  - certifi=2021.10.8
   - cffi=1.14.5
   - chardet=3.0.4
   - click=7.1.2
   - coverage=5.4
   - cryptography=2.9.2
-  - cudatoolkit=10.2.89
+  - cudatoolkit=11.1.1
   - cycler=0.10.0
   - cython=0.29.22
   - freetype=2.10.4
   - git=2.23.0
   - google-auth=1.27.0
   - google-auth-oauthlib=0.4.2
+  - grpcio=1.35.0
+  - icc_rt=2019.0.0
+  - icu=58.2
+  - idna=2.10
+  - importlib-metadata=2.0.0
+  - intel-openmp=2020.2
   - joblib=1.0.1
+  - jpeg=9b
+  - kiwisolver=1.3.1
   - libpng=1.6.37
   - libprotobuf=3.14.0
   - libtiff=4.1.0
@@ -39,13 +47,17 @@ dependencies:
   - markdown=3.3.4
   - matplotlib=3.3.4
   - matplotlib-base=3.3.4
+  - mkl=2020.2
+  - mkl-service=2.3.0
+  - mkl_fft=1.3.0
+  - mkl_random=1.0.2
   - multidict=5.1.0
   - ninja=1.10.2
   - numpy=1.19.2
   - numpy-base=1.19.2
   - oauthlib=3.1.0
   - olefile=0.46
-  - openssl=1.1.1k
+  - openssl=1.1.1l
   - pandas=1.2.1
   - pillow=8.1.0
   - pip=21.0.1
@@ -64,8 +76,9 @@ dependencies:
   - python=3.9.1
   - python-dateutil=2.8.1
   - python_abi=3.9
-  - pytorch=1.7.1
+  - pytorch=1.9.1
   - pytorch-metric-learning=0.9.99
+  - pytorch-mutex=1.0
   - pytz=2021.1
   - pyyaml=5.4.1
   - qt=5.9.7
@@ -84,16 +97,20 @@ dependencies:
   - tensorboard-plugin-wit=1.6.0
   - threadpoolctl=2.1.0
   - tk=8.6.10
-  - torchaudio=0.7.2
-  - torchvision=0.8.2
+  - torchaudio=0.9.1
+  - torchvision=0.10.1
   - tornado=6.1
   - tqdm=4.56.0
   - typing-extensions=3.7.4.3
   - typing_extensions=3.7.4.3
   - tzdata=2020f
   - urllib3=1.26.3
+  - vc=14.2
+  - vs2015_runtime=14.27.29016
   - werkzeug=1.0.1
   - wheel=0.36.2
+  - win_inet_pton=1.1.0
+  - wincertstore=0.2
   - xz=5.2.5
   - yaml=0.2.5
   - yarl=1.6.3
@@ -101,10 +118,31 @@ dependencies:
   - zlib=1.2.11
   - zstd=1.4.8
   - pip:
+    - alembic==1.7.4
+    - autopage==0.4.0
+    - bottle==0.12.19
+    - cliff==3.9.0
+    - cmaes==0.8.2
+    - cmd2==2.2.0
+    - colorama==0.4.4
+    - colorlog==6.5.0
     - gitpy==0.0.5
     - googledrivedownloader==0.4
+    - greenlet==1.1.2
     - llvmlite==0.36.0
+    - mako==1.1.5
+    - markupsafe==2.0.1
     - numba==0.53.0
+    - optuna==2.10.0
+    - optuna-dashboard==0.5.0
+    - packaging==21.0
+    - pbr==5.6.0
+    - prettytable==2.2.1
     - pynndescent==0.5.2
+    - pyperclip==1.8.2
+    - pyreadline3==3.3
+    - sqlalchemy==1.4.25
+    - stevedore==3.4.0
     - umap-learn==0.5.1
-prefix: C:\Users\migue\Anaconda3\envs\deni
+    - wcwidth==0.2.5
+
