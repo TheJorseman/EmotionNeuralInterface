@@ -6,7 +6,12 @@
 __pycache__/
 *.py[cod]
 *$py.class
+# Custom
 data/
+.sqbpro
+.csv
+optuna/
+
 # C extensions
 *.so
 
