@@ -214,10 +214,10 @@ class Workbench(object):
         config_file = self.data["model"]["model_config_path"]
         if isinstance(config_file, str):
             with open(config_file) as f:
-                self.data = yaml.load(f, Loader=yaml.FullLoader)
-                print(self.data)
+                self.model_config = yaml.load(f, Loader=yaml.FullLoader)
+                print(self.model_config)
         elif isinstance(config_file, dict):
-            self.data = config_file
+            self.model_config = config_file
         else:
             raise Warning("Type of file not valid")
 
