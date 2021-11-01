@@ -4,43 +4,53 @@ spatial_conv:
     kernel: [14,1]
 layers:
   conv2d1:
-    channels_out: 256
-    kernel: [1,64]
+    channels_out: 128
+    kernel: [1,16]
     stride: 1
     maxpool:
-      kernel: [1,2]
+      kernel: [1,8]
       stride: [1,2]
     #act_fn: "gelu"
     act_fn: "gelu"
     dropout: 0.2
     batch_normalization: True
   conv2d2:
-    channels_out: 128
-    kernel: [1,32]
+    channels_out: 64
+    kernel: [1,12]
     stride: 1
     maxpool:
-      kernel: [1,2]
+      kernel: [1,8]
       stride: [1,1]
     act_fn: "gelu"
     dropout: 0.2
     batch_normalization: True
   conv2d3:
-    channels_out: 64
+    channels_out: 32
     kernel: [1,16]
     stride: 1
     maxpool:
-      kernel: [1,2]
+      kernel: [1,8]
       stride: [1,2]
     act_fn: "gelu"
     dropout: 0.2
     batch_normalization: True
   conv2d4:
-    channels_out: 32
+    channels_out: 16
     kernel: [1,8]
     stride: 1
     maxpool:
-      kernel: [1,2]
+      kernel: [1,4]
       stride: [1,1]
+    act_fn: "gelu"
+    dropout: 0.2
+    batch_normalization: True
+  conv2d5:
+    channels_out: 16
+    kernel: [1,8]
+    stride: 1
+    maxpool:
+      kernel: [1,4]
+      stride: [1,2]
     act_fn: "gelu"
     dropout: 0.2
     batch_normalization: True
