@@ -165,5 +165,7 @@ dmypy.json
 /runscnn
 /sketches
 /Tiny Runs
-
+*.sql
+*.sqbpro
+*.csv
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,python
