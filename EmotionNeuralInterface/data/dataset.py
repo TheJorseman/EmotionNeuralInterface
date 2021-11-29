@@ -5,16 +5,31 @@ class NetworkDataSet(Dataset):
   """
   Esta clase hereda de la clase Dataset de Pytorch, en esta se generan en forma de tensor todos los datos para ser procesados por la red neuronal.
   """  
-  def __init__(self, data, tokenizer):
+  def __init__(self, data, tokenizer, siamese_network=True):
     self.tokenizer = tokenizer
     self.data = data
+    self.siamese_network = siamese_network
 
   def __getitem__(self, i):
     data = self.data[i]
-    if type(data["input1"]) == type(list()):
+    if type(data.get("input1", False)) == type(list()):
       return self.handle_multiple_channel(data)
-    else:
+    elif type(data.get("input1", False)) == type(str()):
       return self.handle_single_channel(data)
+    else:
+      return self.handle_finetuning(data)
+
+  def handle_finetuning(self, data):
+    output = {}
+    if type(data["input"]) == type(list()):
+      input_data = [self.tokenizer.full_dataset[tid] for tid in data['input']]
+      output['input'] = torch.tensor(input_data, dtype=torch.float32)
+    else:
+      output['input'] = torch.tensor(self.tokenizer.full_dataset[data['input']], dtype=torch.float32)
+    output['output'] = torch.tensor(data['output'], dtype=torch.long)
+    output["channels"] = data["channels"]
+    output["subject"] = data["subject"]
+    return output
 
 
   def handle_multiple_channel(self, data):

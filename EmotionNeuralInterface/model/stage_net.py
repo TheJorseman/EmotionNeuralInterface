@@ -67,10 +67,18 @@ class FullyConected(nn.Module):
             return nn.ReLU()
         elif value == "gelu":
             return nn.GELU()
+        elif value == "leaky_relu":
+            return nn.LeakyReLU()
+        elif value == "tanh":
+            return nn.Tanh()
+        elif value == "sigmoid":
+            return nn.Sigmoid()
+        elif value == "softmax":
+            return nn.Softmax(dim=1)
         raise Warning("No supported activation function")
 
     def forward(self, x):
-        output = flatten(x,start_dim=1)
+        output = flatten(x, start_dim=1)
         output = self.linear(output)
         output = self.act_fn(output)
         output = self.normalization(output)

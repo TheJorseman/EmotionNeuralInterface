@@ -2,3 +2,4 @@
 from . import dataset
 from . import tokenizer
 from . import pretext_task
+from . import tasks

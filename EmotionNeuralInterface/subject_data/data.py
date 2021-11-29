@@ -85,8 +85,9 @@ class Data(object):
   def set_markers(self):
     """
     Se establecen los marcadores de inicio y fin del experimento.
-    """    
-    self.index_init_marker = self.df_data["MARKER"].loc[lambda x: x==1.0].index[0]
+    """
+    self.index_init_marker = self.df_data["MARKER"].loc[lambda x: x==1.0]
+    self.index_init_marker = self.index_init_marker.index[0] if len(self.index_init_marker) > 0 else 0
     self.index_end_marker = self.index_init_marker + self.experiment_time * int(self.metadata["sampling"])
     if self.index_end_marker > self.df_data.shape[0]:
       self.index_end_marker = self.df_data.shape[0]
@@ -100,7 +101,8 @@ class Data(object):
         dataframe: Dataframe que corresponde a los valores por cada canal y cuando se inicio el experimento
     """ 
     exp = self.df_data
-    index_marker = exp['MARKER'].loc[lambda x: x==1.0].index[0]
+    index_marker = exp['MARKER'].loc[lambda x: x==1.0]
+    index_marker = index_marker.index[0] if len(index_marker) > 0 else 0
     df = exp[index_marker:]
     new_df = DataFrame()
     #x = df.values

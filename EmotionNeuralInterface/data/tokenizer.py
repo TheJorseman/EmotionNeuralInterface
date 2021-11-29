@@ -9,7 +9,9 @@ class Tokenizer(object):
                     window_size=128,
                     channels="all", 
                     pad_array=False, 
-                    stride=64):
+                    stride=64,
+                    tries=10,
+                    patience=10,):
     """
     Constructor.
     Args:
@@ -18,7 +20,9 @@ class Tokenizer(object):
         channels (str, optional): Canales con los que se quiere trabajar. Defaults to "all".
         pad_array (bool, optional): Sirve para que . Defaults to False.
         stride (int, optional): Desplazamiento sobre la señal cuando se "tokeniza". Defaults to 128.
-    """    
+        tries (int, optional): Define cuantas veces se va a intentar generar el dato sin repetirse. Defaults to 10.
+        patience (int, optional): Define cuantos intentos no exitosos se permiten hasta parar la generacion del dataset. Defaults to 10.
+    """
     self.subjects = subjects
     self.window_size = window_size
     self.stride = stride
@@ -28,6 +32,8 @@ class Tokenizer(object):
     else:
       self.channels = ["AF3", "F7", "F3", "FC5", "T7", "P7", "O1", "O2", "P8", "T8", "FC6", "F4", "F8", "AF4"]
     self.full_dataset = []
+    self.tries = tries
+    self.patience = patience
     #self.full_dataset = []
     #self.convert_to_ids()
     self.stride_dataset()
