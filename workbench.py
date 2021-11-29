@@ -512,7 +512,7 @@ class Workbench(object):
         report.write(class_report)
         report.close()
 
-    def gen_model_reports(self, y_real, y_predict, y_distance, df):
+    def gen_model_reports(self, y_real, y_predict, df):
         Y_P = np.array(y_predict)
         Y_V = np.array(y_real)
         self.save_crosstab(Y_V, Y_P)
@@ -681,7 +681,7 @@ class Workbench(object):
         self.optimizer = self.get_optimizer(self.model)
         self.train()
         self.model.eval()
-        _, _, _, _ =self.test_optuna()
+        self.test_optuna()
 
     def save_model(self, folder, name="checkpoint"):
         if not os.path.exists(folder):
