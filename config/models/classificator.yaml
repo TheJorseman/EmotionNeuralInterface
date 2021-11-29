@@ -1,0 +1,18 @@
+name: "classificator"
+use_model: False 
+#use_model: "config/models/linear.yaml"
+#use_model: "config/models/conv1d.yaml"
+#use_model: "config/models/stagenet.yaml"
+#use_model: "config/models/nedbert.yaml"
+layers:
+  linear1:
+    output_dim: 64
+    act_fn: "relu"
+    dropout: 0.2
+    batch_normalization: True
+  linear2:
+    output_dim: -1
+    act_fn: "softmax"
+    dropout: 0.0
+    batch_normalization: False
+

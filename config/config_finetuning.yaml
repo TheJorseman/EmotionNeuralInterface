@@ -1,0 +1,63 @@
+dataset:
+  #dataset_path: "C:/Users/migue/Documents/GitHub/Datasets/Artefactos"
+  dataset_path: "C:/Users/migue/Documents/GitHub/Datasets/Experimento"
+  #dataset_path: "https://drive.google.com/file/d/1Dd0JwaCvY62OtkQD4Ff5kI-_RQzFxOpH/view"
+use_pretrained: True
+only_test: False
+use_zero_shot: True
+knn:
+  n_neighbors: "optim"
+  #n_neighbors: 5
+load_model:
+  path: "optuna/optuna_conv1d_129.pt"
+  metadata: "optuna/optuna_metadata.json"
+# if use_pretrained is True, the token will be ignorated else it must be defined by metadata
+tokenizer:
+  window_size: 1024
+  stride: 64
+dataset_subjects:
+  train_subjects: 14
+  test_subjects: 3
+  validation_subjects: 3
+datagen_config:
+  dataset: "folder_dataset"
+  gen_data: "all"
+  dataset_train_len: 70000
+  dataset_test_len: 20000
+  dataset_validation_len: 10000
+  # Multiple Channel Config
+  multiple_channel:
+    # Number of multiple channels
+    multiple_channel_len: 14
+dataset_batch:
+  train_batch_size: 80
+  validation_batch_size: 80
+  test_batch_size: 80
+model:
+  folder_save: "models"
+  extention: "pt"
+  model_config_path: "config/models/classificator.yaml"
+loss:
+  loss_function: "cross_entropy"
+  #loss_function: "mce"
+optimizer: 
+  name: "adam"
+  learning_rate: 0.03
+  w_decay: 0.0001
+  momentum: 0.9
+train:
+  epochs: 50
+  save_each: "epoch"
+  #save_each: "100-iter"
+validation:
+  use_each: "epoch"
+  #use_each: "10000-iter"
+test:
+  use_test: True
+  dataset_frac: 1.0
+github:
+  dev: "thejorseman"
+
+
+
+
