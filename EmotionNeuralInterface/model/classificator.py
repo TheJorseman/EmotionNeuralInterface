@@ -1,6 +1,6 @@
 import torch.nn as nn
 from numpy import prod
-import json
+import yaml
 from .model import SiameseLinearNetwork
 from .model import SiameseNetwork
 from .stage_net import StageNet, FullyConected, Encoder
@@ -11,7 +11,7 @@ def select_model(path, window_size, multichannel_len):
     """
     Select the model to use.
     """
-    model_config = json.load(open(path, "r"))
+    model_config = yaml.load(open(path, "r"), Loader=yaml.FullLoader)
     name = model_config["name"]
     if name == "siamese_stagenet":
         return StageNet(model_config, width=window_size,height=multichannel_len)
