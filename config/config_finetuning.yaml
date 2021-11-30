@@ -2,7 +2,7 @@ dataset:
   #dataset_path: "C:/Users/migue/Documents/GitHub/Datasets/Artefactos"
   dataset_path: "C:/Users/migue/Documents/GitHub/Datasets/Experimento"
   #dataset_path: "https://drive.google.com/file/d/1Dd0JwaCvY62OtkQD4Ff5kI-_RQzFxOpH/view"
-use_pretrained: True
+use_pretrained: False
 only_test: False
 use_zero_shot: True
 knn:

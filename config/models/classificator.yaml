@@ -1,6 +1,6 @@
 name: "classificator"
-use_model: False 
-#use_model: "config/models/linear.yaml"
+#use_model: False 
+use_model: "config/models/linear.yaml"
 #use_model: "config/models/conv1d.yaml"
 #use_model: "config/models/stagenet.yaml"
 #use_model: "config/models/nedbert.yaml"
