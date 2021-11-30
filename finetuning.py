@@ -63,14 +63,7 @@ logging.basicConfig(
 
 class FinetuneModel(object):
     def __init__(self, config_file):
-        if isinstance(config_file, str):
-            with open(config_file) as f:
-                self.data = yaml.load(f, Loader=yaml.FullLoader)
-                print(self.data)
-        elif isinstance(config_file, dict):
-            self.data = config_file
-        else:
-            raise Warning("Type of file not valid")
+        self.data = self._get_dict_model_file(config_file)
         print(self.data)
         self.device = 'cuda' if cuda.is_available() else 'cpu'
         torch.set_grad_enabled(False)
@@ -78,6 +71,9 @@ class FinetuneModel(object):
         if self.data['use_pretrained']:
             self.load_pretrained_model()
             self.set_pretrained_data()
+        else:
+            self.pretrained_model = False
+            self.set_multichannel_create_from_file()
         self.load_dataset()
         self.load_tokenizer()
         self.dataset_subjects()
@@ -88,6 +84,20 @@ class FinetuneModel(object):
         self.evaluation_accuracy = 0
         self.dA_eval = 0
     
+    def _get_dict_model_file(self, config_file):
+        if isinstance(config_file, str):
+            with open(config_file) as f:
+                return yaml.load(f, Loader=yaml.FullLoader)
+        elif isinstance(config_file, dict):
+            return config_file
+        else:
+            raise Warning("Type of file not valid")
+
+
+    def set_multichannel_create_from_file(self):
+        clasificator = self._get_dict_model_file(self.data['model']['model_config_path'])
+        self.multichannel_create = ('stagenet' in clasificator['use_model'] or 'stagenet' in clasificator['use_model'])
+
     def load_pretrained_model(self):
         path = self.data['load_model']['path']
         self.pretrained_model = torch.load(path)
@@ -96,6 +106,7 @@ class FinetuneModel(object):
         name = os.path.basename(path)
         if name not in metadata.keys():
             self.pretrained_model_config = metadata
+            self.set_multichannel_create_from_file()
         else:
             self.pretrained_model_config = metadata[name]
             self.pretrained_model_config['name'] = name
@@ -687,8 +698,9 @@ class FinetuneModel(object):
             yaml.dump(self.data, outfile, default_flow_style=False)
         path_model = os.path.join(self.base_path, 'model_config.yaml') 
         # Se lee otra vez el archivo de configuracion por un bug
-        with open(self.data["model"]["model_config_path"]) as f:
-            self.model_config = yaml.load(f, Loader=yaml.FullLoader)
+        self.model_config = self._get_dict_model_file(self.data["model"]["model_config_path"])
+        #with open(self.data["model"]["model_config_path"]) as f:
+        #    self.model_config = yaml.load(f, Loader=yaml.FullLoader)
         #######################################
         with open(path_model, 'w') as outfile:
             yaml.dump(self.model_config , outfile, default_flow_style=False)        
@@ -701,9 +713,23 @@ class FinetuneModel(object):
         self.model.to(self.device)
         self.get_loss_function()
         self.optimizer = self.get_optimizer(self.model)
-        self.train()
-        self.model.eval()
-        self.test_optuna()
+        if not self.data['only_test']:
+            self.train()
+            self.model.eval()
+        y_real, y_predict, df =self.test()
+        values = self.get_best_knn_model(df, y_real)
+        self.save_knn_data(values)
+        self.gen_model_reports(y_real, y_predict, df)
+        #self.test_optuna()
+
+    def save_knn_data(self, data):
+        new_data = {
+            'n_neighbors': data['n_neighbors'],
+            'accuracy': data['accuracy']
+        }
+        path_model = os.path.join(self.plot_path, 'knn.json') 
+        knn = open(path_model, 'w')
+        return json.dump(new_data, knn)
 
     def save_model(self, folder, name="checkpoint"):
         if not os.path.exists(folder):
@@ -714,6 +740,7 @@ class FinetuneModel(object):
         values = self.get_best_knn_model(df, y_real)
         print("BEST MODEL n_neighbors: ", values['n_neighbors'])
         print("BEST MODEL accuracy: ", values['accuracy'])
+        self.save_knn_data(values)
         return self.gen_model_reports(y_real, values['y_predict'], df)
 
     def run(self):
