@@ -25,8 +25,9 @@ def select_model(path, window_size, multichannel_len):
 
 
 class Classificator(nn.Module):
-    def __init__(self, config_model, pretrained=False, window_size=512, multichannel_len=14, channels_in=1):
+    def __init__(self, config_model, pretrained=False, window_size=512, multichannel_len=14, channels_in=1, class_dim=2):
         super(Classificator, self).__init__()
+        self.class_dim = class_dim
         self.config_model = config_model
         self.multichannel_len = multichannel_len
         if not pretrained:
@@ -46,7 +47,7 @@ class Classificator(nn.Module):
         shapes = [dim_tuple]
         for key in layers.keys():
             if layers[key]["output_dim"] == -1:
-                layers[key]["output_dim"] = self.multichannel_len
+                layers[key]["output_dim"] = self.class_dim
             if "conv" in key:
                 modules.append(CNN1D(layers[key], channels_in=shapes[-1][0], l_in=shapes[-1][1]))
             elif "linear" in key:

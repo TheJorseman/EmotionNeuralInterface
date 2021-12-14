@@ -6,11 +6,26 @@ use_model: "config/models/linear.yaml"
 #use_model: "config/models/nedbert.yaml"
 layers:
   linear1:
-    output_dim: 64
+    output_dim: 128
     act_fn: "relu"
     dropout: 0.2
     batch_normalization: True
   linear2:
+    output_dim: 64
+    act_fn: "relu"
+    dropout: 0.2
+    batch_normalization: True
+  linear3:
+    output_dim: 32
+    act_fn: "relu"
+    dropout: 0.2
+    batch_normalization: True
+  linear4:
+    output_dim: 16
+    act_fn: "relu"
+    dropout: 0.2
+    batch_normalization: True
+  linear5:
     output_dim: -1
     act_fn: "softmax"
     dropout: 0.0

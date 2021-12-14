@@ -154,6 +154,7 @@ class FinetuneModel(object):
 
     def set_train_datagen(self):
         self.train_data_generator = self.get_dataset_generator(self.train_subjets, dataset_max_len=self.dataset_train_len)
+        self.class_dim = self.train_data_generator.len_data
         self.data_train = self.train_data_generator.get_dataset()
         print("Entrenamiento")
         print(self.train_data_generator.dataset_metadata)
@@ -263,7 +264,7 @@ class FinetuneModel(object):
         multichannel = self.data['datagen_config']['multiple_channel']['multiple_channel_len']
         if m_type == "classificator":
             return Classificator(self.model_config, pretrained=self.pretrained_model, 
-            window_size=self.data['tokenizer']['window_size'], multichannel_len=multichannel, channels_in=1)
+            window_size=self.data['tokenizer']['window_size'], multichannel_len=multichannel, channels_in=1, class_dim=self.class_dim)
         raise Warning("No type model found")
 
 
@@ -727,6 +728,7 @@ class FinetuneModel(object):
             'n_neighbors': data['n_neighbors'],
             'accuracy': data['accuracy']
         }
+        self.knn_data = new_data
         path_model = os.path.join(self.plot_path, 'knn.json') 
         knn = open(path_model, 'w')
         return json.dump(new_data, knn)

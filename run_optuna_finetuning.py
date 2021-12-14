@@ -15,11 +15,11 @@ key_model = 'conv1d'
 selected_model = models[key_model]
 task_list = ["same_channel_single_channel", "same_subject_single_channel", "consecutive_single_channel"]
 optimizers = ["adam", "sgd"]
-EPOCHS = 70
+EPOCHS = 40
 
 folder_models = "optuna"
 
-files = [file for file in os.listdir(folder_models) if file.endswith(".pt")]
+files = tuple([file for file in os.listdir(folder_models) if file.endswith(".pt")])
 
 f = open("config/models/classificator.yaml")
 data_model = yaml.load(f, Loader=yaml.FullLoader)
@@ -70,8 +70,10 @@ def common_hyperparameters(trial, data):
     data['dataset_batch']['train_batch_size'] = trial.suggest_int('batch_size', b_i, b_e)
     data['tokenizer']['stride'] =  trial.suggest_int('stride', 64, 1024, step=64)
     #data['loss']['margin'] = trial.suggest_float("margin", 0.1, 10)
-    data['use_pretrained'] = bool(trial.suggest_int('use_pretrained', 0, 1))
-    data['only_test'] = bool(trial.suggest_int('use_pretrained', 0, 1))
+    #data['use_pretrained'] = bool(trial.suggest_int('use_pretrained', 0, 1))
+    data['use_pretrained'] = True
+    data['only_test'] = True
+    #data['only_test'] = bool(trial.suggest_int('use_pretrained', 0, 1))
     #get_embedding_dim(trial, key_model, data_model)
     if data['only_test']:
         data_model['use_model'] = False
@@ -103,10 +105,76 @@ storage = optuna.storages.RDBStorage(
     heartbeat_interval=1
 )
 
+def test_all_zero_shots():
+    result = {}
+    data['use_pretrained'] = True
+    data['only_test'] = True
+    if data['only_test']:
+        data_model['use_model'] = False
+    else:
+        data_model['use_model'] = selected_model
+    data['model']['model_config_path'] = data_model
+    data['train']['epochs'] = EPOCHS
+    i = 1
+    for model in files:
+        try:
+            data['load_model']['path'] = os.path.join(folder_models, model)
+            exp = FinetuneModel(data)
+            exp.run()
+            result[model] = exp.knn_data
+            with open('result-zero-shot.json', 'w') as f:
+                json.dump(result, f)
+        except Exception as e:
+            print(e)
+        i += 1
+        print("{} de {}".format(i, len(files)))
+    #exp.save_model("optuna", name="optuna_{}_{}".format(key_model, trial._trial_id))
+    #trial.set_user_attr("train_accuracy", exp.train_accuracy)
+    #trial.set_user_attr("evaluation_accuracy", exp.evaluation_accuracy)
+
+
+def test_finetuning():
+    #import pdb;pdb.set_trace()
+    filename = 'result-finetuning-deep.json'
+    result = {}
+    data = yaml.load(open(DATA_YAML), Loader=yaml.FullLoader)
+    data['use_pretrained'] = True
+    data['only_test'] = False
+    data['train']['epochs'] = EPOCHS
+    if data['only_test']:
+        data_model['use_model'] = False
+    else:
+        data_model['use_model'] = selected_model
+    data['model']['model_config_path'] = data_model
+    i = 1
+    if os.path.exists(filename):
+        with open(filename, 'r') as f:
+            data = json.load(f)
+    for model in files:
+        if model in result:
+            continue
+        try:
+            data['load_model']['path'] = os.path.join(folder_models, model)
+            exp = FinetuneModel(data)
+            exp.run()
+            result[model] = {}
+            result[model]['knn'] = exp.knn_data
+            result[model]['train_acc'] = exp.train_accuracy
+            result[model]['test_acc'] = exp.test_accuracy
+            with open(filename, 'w') as f:
+                json.dump(result, f)
+        except Exception as e:
+            print(e)
+        i += 1
+        print("{} de {}".format(i, len(files)))
+
+
 if __name__ == '__main__':
-    study = optuna.create_study(storage=storage, study_name="pytorch_finetuning_{}_{}".format(key_model, WINDOW_SIZE), direction='maximize', load_if_exists=True)
-    study.optimize(objective, n_trials=50)
-    output = {'model': key_model, 'epochs': EPOCHS}
-    output.update(study.best_params)
-    with open('result-optuna-{}.json'.format(datetime.now().timestamp()), 'w') as f:
-        json.dump(output, f)
+    #test_all_zero_shots()
+    test_finetuning()
+    #study = optuna.create_study(storage=storage, study_name="pytorch_finetuning_{}_{}".format(key_model, WINDOW_SIZE), direction='maximize', load_if_exists=True)
+    #study.optimize(objective, n_trials=50)
+    #output = {'model': key_model, 'epochs': EPOCHS}
+    #output.update(study.best_params)
+    #with open('result-optuna-{}.json'.format(datetime.now().timestamp()), 'w') as f:
+    #    json.dump(output, f)

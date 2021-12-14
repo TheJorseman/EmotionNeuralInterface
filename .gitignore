@@ -168,4 +168,6 @@ dmypy.json
 *.sql
 *.sqbpro
 *.csv
+*.json
+/finetuning
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,python
