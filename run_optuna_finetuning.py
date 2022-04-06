@@ -15,7 +15,7 @@ key_model = 'conv1d'
 selected_model = models[key_model]
 task_list = ["same_channel_single_channel", "same_subject_single_channel", "consecutive_single_channel"]
 optimizers = ["adam", "sgd"]
-EPOCHS = 40
+EPOCHS = 100
 
 folder_models = "optuna"
 
@@ -86,6 +86,7 @@ def objective(trial):
     common_hyperparameters(trial, data)
     #data['datagen_config']['dataset'] = get_task(trial, key_model)
     data['train']['epochs'] = EPOCHS
+    data['train']['save_each'] = ""
     #data['model']['model_config_path'] = selected_model
     #data['datagen_config']['dataset_train_len'] = dataset_train_len
     #data['datagen_config']['dataset_test_len'] = dataset_test_len
@@ -115,6 +116,7 @@ def test_all_zero_shots():
         data_model['use_model'] = selected_model
     data['model']['model_config_path'] = data_model
     data['train']['epochs'] = EPOCHS
+    data['train']['save_each'] = ""
     i = 1
     for model in files:
         try:
@@ -134,13 +136,13 @@ def test_all_zero_shots():
 
 
 def test_finetuning():
-    #import pdb;pdb.set_trace()
     filename = 'result-finetuning-deep.json'
     result = {}
     data = yaml.load(open(DATA_YAML), Loader=yaml.FullLoader)
     data['use_pretrained'] = True
     data['only_test'] = False
     data['train']['epochs'] = EPOCHS
+    data['train']['save_each'] = ""
     if data['only_test']:
         data_model['use_model'] = False
     else:
@@ -168,10 +170,52 @@ def test_finetuning():
         i += 1
         print("{} de {}".format(i, len(files)))
 
+def test_train_zero():
+    result = {}
+    data['use_pretrained'] = False
+    data['only_test'] = False
+    data['model']['model_config_path'] = data_model
+    data['train']['epochs'] = EPOCHS
+    data['train']['save_each'] = ""
+    i = 1
+    models_metadata = {}
+    with open('optuna/optuna_metadata.json', 'r') as f:
+        models_metadata = json.load(f)
+    for model in files:
+        try:
+            data['load_model']['path'] = os.path.join(folder_models, model)
+            if 'conv1d' in model:
+                data_model['use_model'] = models['conv1d']
+            elif 'conv2d' in model:
+                data_model['use_model'] = models['conv2d']
+            metadata = models_metadata[model]
+            data['optimizer']['learning_rate'] = metadata['learning_rate']
+            
+            data['dataset_batch']['train_batch_size'] = int(metadata['batch_size'])
+            data['dataset_batch']['validation_batch_size'] = int(metadata['batch_size'])
+            data['dataset_batch']['test_batch_size'] = int(metadata['batch_size'])
+
+            data['tokenizer']['window_size'] = int(metadata['window_size'])
+            data['tokenizer']['stride'] = int(metadata['stride'])
+
+            exp = FinetuneModel(data)
+            exp.run()
+            result[model] = {}
+            result[model]['knn'] = exp.knn_data
+            result[model]['train_acc'] = exp.train_accuracy
+            result[model]['test_acc'] = exp.test_accuracy
+            with open('result-zero-training.json', 'w') as f:
+                json.dump(result, f)
+        except Exception as e:
+            print(e)
+        i += 1
+        print("{} de {}".format(i, len(files)))
+
 
 if __name__ == '__main__':
     #test_all_zero_shots()
     test_finetuning()
+    #test_train_zero()
     #study = optuna.create_study(storage=storage, study_name="pytorch_finetuning_{}_{}".format(key_model, WINDOW_SIZE), direction='maximize', load_if_exists=True)
     #study.optimize(objective, n_trials=50)
     #output = {'model': key_model, 'epochs': EPOCHS}

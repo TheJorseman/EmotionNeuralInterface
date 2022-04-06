@@ -1,3 +1,4 @@
+from math import gamma
 from EmotionNeuralInterface.tools.paths_utils import get_paths_experiment, get_path
 from EmotionNeuralInterface.subject_data.utils import create_subject_data
 from EmotionNeuralInterface.data.tokenizer import Tokenizer
@@ -22,10 +23,12 @@ from EmotionNeuralInterface.model.model import SiameseLinearNetwork
 from EmotionNeuralInterface.model.model import SiameseNetwork
 from EmotionNeuralInterface.model.stage_net import StageNet
 from EmotionNeuralInterface.model.nedbert import NedBERT
+from EmotionNeuralInterface.model.coatnet import SiameseCoatNet
 
 import torch
 from torch import cuda
 from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import StepLR
 from torch.utils.tensorboard import SummaryWriter
 import torch.nn as nn
 import torch.nn.functional as F
@@ -55,7 +58,9 @@ from umap import UMAP
 import logging
 from pathlib import Path
 import psutil
-
+import torch.distributed as dist
+from torch.utils.data.distributed import DistributedSampler
+from torch.nn.parallel import DistributedDataParallel
 MEMORY_LIMIT = 95
 
 
@@ -67,7 +72,7 @@ logging.basicConfig(
 )
 
 class Workbench(object):
-    def __init__(self, config_file):
+    def __init__(self, config_file, ddp=False):
         if isinstance(config_file, str):
             with open(config_file) as f:
                 self.data = yaml.load(f, Loader=yaml.FullLoader)
@@ -77,9 +82,12 @@ class Workbench(object):
         else:
             raise Warning("Type of file not valid")
         print(self.data)
+        self.ddp = ddp
         self.device = 'cuda' if cuda.is_available() else 'cpu'
         torch.set_grad_enabled(False)
         self.model_config = {}
+        if self.ddp:
+            self.ddp_data = self.data["ddp"]
         self.load_dataset()
         self.load_tokenizer()
         self.dataset_subjects()
@@ -90,6 +98,17 @@ class Workbench(object):
         self.evaluation_accuracy = 0
         self.dA_eval = 0
     
+    def set_ddp_config(self):
+        print("Init Process Group")
+        self.world_size = self.ddp_data['n_gpus'] * self.ddp_data['nodes']
+        dist.init_process_group(
+            backend='gloo',
+            init_method='env://',
+            world_size=self.world_size,
+            rank=self.ddp_data['rank']
+        )
+        torch.manual_seed(self.ddp_data['seed'])
+
     def load_dataset(self):
         path = get_path(self.data["dataset"]["dataset_path"])
         experiments_paths = get_paths_experiment(path)
@@ -186,7 +205,7 @@ class Workbench(object):
 
         train_params = {'batch_size': self.TRAIN_BATCH_SIZE,
                         'shuffle': True,
-                        'num_workers': 2
+                        'num_workers': 0
                         }
 
         validation_params = {'batch_size': self.VALID_BATCH_SIZE,
@@ -198,10 +217,32 @@ class Workbench(object):
                             'shuffle': True,
                             'num_workers': 0
                         }
+
+        if self.ddp:
+            self.get_sampler(self.training_set, train_params)
+            self.get_sampler(self.validation_set, validation_params)
+            self.get_sampler(self.testing_set, test_params)
+            """
+            self.train_sampler = DistributedSampler(self.training_set, num_replicas=self.world_size, rank=self.ddp_data['rank'], shuffle=True)
+            train_params['sampler'] = self.train_sampler
+            train_params['shuffle'] = False
+            self.validation_sampler = DistributedSampler(self.validation_set, num_replicas=self.world_size, rank=self.ddp_data['rank'], shuffle=True)
+            validation_params['sampler'] = self.validation_sampler
+            validation_params['shuffle'] = False
+            self.test_sampler = DistributedSampler(self.testing_set, num_replicas=self.world_size, rank=self.ddp_data['rank'], shuffle=True)
+            test_params['sampler'] = self.test_sampler
+            test_params['shuffle'] = False
+            """
         self.training_loader = DataLoader(self.training_set, **train_params)
         self.validation_loader = DataLoader(self.validation_set, **validation_params)
         self.testing_loader = DataLoader(self.testing_set, **test_params)
      
+    def get_sampler(self, dataset, loader_params):
+        sampler = DistributedSampler(dataset, num_replicas=self.world_size, rank=self.ddp_data['rank'], shuffle=True)
+        loader_params['sampler'] = sampler
+        loader_params['shuffle'] = False
+
+
     def get_model_features(self):
         return self.model_config['name']
 
@@ -237,9 +278,15 @@ class Workbench(object):
 
 
     def get_model(self):
+        model = None
         if self.data["train"]["load_model"]:
-            return torch.load(self.get_model_path(self.data["train"]["load_model_name"]))
-        return self.get_type_model()
+            model = torch.load(self.get_model_path(self.data["train"]["load_model_name"]))
+        else:
+            model = self.get_type_model()
+        if self.ddp:
+            device_ids = list(range(0, self.ddp_data['n_gpus']))
+            model = DistributedDataParallel(model, device_ids=device_ids)
+        return model
 
     def get_type_model(self):
         m_type = self.model_config['name']
@@ -252,6 +299,9 @@ class Workbench(object):
             return SiameseLinearNetwork(self.model_config, window_size=self.data["tokenizer"]["window_size"])
         elif m_type == "nedbert":
             return NedBERT(self.model_config, sequence_lenght=self.data["tokenizer"]["window_size"])
+        elif m_type == "siamese_coatnet":
+            shape = (self.data['datagen_config']["multiple_channel"]["multiple_channel_len"], self.data["tokenizer"]["window_size"])
+            return SiameseCoatNet(shape, self.model_config)
         raise Warning("No type model found")
 
 
@@ -264,6 +314,11 @@ class Workbench(object):
         elif self.data["optimizer"]['name'] == "sgd":
             return torch.optim.SGD(model.parameters(), lr=self.LEARNING_RATE, weight_decay=w_decay, momentum=momentum)
         raise Warning("No optimizer " + self.data["optimizer"]['name'])
+
+    def get_scheduler(self, optimizer):
+        step = self.data["optimizer"]['scheduler_step']
+        gamma = self.data["optimizer"]['gamma']
+        return StepLR(optimizer, step_size=step, gamma=gamma)
 
 
     def calculate_distance(self, output1, output2):
@@ -334,16 +389,25 @@ class Workbench(object):
         n_correct = 0
         examples = 0
         distance = self.get_distance_function()
-        for _,data in enumerate(self.training_loader, 0):
+        print("LR: {}".format(self.scheduler.get_last_lr()))
+        for batch_idx, data in enumerate(self.training_loader, 0):
             input1 = data["input1"].to(self.device)
             input2 = data["input2"].to(self.device)
             target = torch.squeeze(data["output"],0).to(self.device)
             output1, output2 = self.model(input1, input2)
             #print("Targets ",target)
             loss_contrastive = self.loss_function(output1, output2, target)
-            self.optimizer.zero_grad()
+            if self.accum_iter > 1:
+                loss_contrastive = loss_contrastive/self.accum_iter
             loss_contrastive.backward()
-            self.optimizer.step()
+            if self.accum_iter > 1:
+                if ((batch_idx + 1) % self.accum_iter == 0) or (batch_idx + 1 == len(self.training_loader)):
+                    print("Gradient Acumulation")
+                    self.optimizer.step()
+                    self.optimizer.zero_grad()
+            else:
+                self.optimizer.step()
+                self.optimizer.zero_grad()
             logging.info("Epoch {} Current loss {}\n".format(epoch,loss_contrastive.item()))
             print("Epoch {} Current loss {}\n".format(epoch,loss_contrastive.item()))
             self.writer.add_scalar("Loss/train", loss_contrastive.item(), epoch)
@@ -362,6 +426,7 @@ class Workbench(object):
             print("Acc ", (n_correct/examples)*100)
             self.writer.add_scalar("Accuracy/train", (n_correct/examples)*100, epoch)
             n += 1
+        self.scheduler.step()
         accuracy = n_correct/examples
         self.dA_train = accuracy - self.dA_train
         self.train_accuracy = accuracy
@@ -376,6 +441,8 @@ class Workbench(object):
         self.model.to(self.device)
         self.get_loss_function()
         self.optimizer = self.get_optimizer(self.model)
+        self.scheduler = self.get_scheduler(self.optimizer)
+        self.accum_iter = self.data["dataset_batch"]["grad_accum"]
 
     def get_loss_function(self):
         loss_func = self.data["loss"]["loss_function"]
@@ -679,6 +746,7 @@ class Workbench(object):
         self.model.to(self.device)
         self.get_loss_function()
         self.optimizer = self.get_optimizer(self.model)
+        self.scheduler = self.get_scheduler(self.optimizer)
         self.train()
         self.model.eval()
         self.test_optuna()
