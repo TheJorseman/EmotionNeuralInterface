@@ -2,26 +2,26 @@ dataset:
   #dataset_path: "C:/Users/migue/Documents/GitHub/Datasets/Experimento"
   dataset_path: "https://drive.google.com/file/d/1Dd0JwaCvY62OtkQD4Ff5kI-_RQzFxOpH/view"
 tokenizer:
-  window_size: 1024
-  stride: 64
+  window_size: 512
+  stride: 256
 dataset_subjects:
-  train_subjects: 14
-  test_subjects: 3
-  validation_subjects: 3
+  train_subjects: 12
+  test_subjects: 4
+  validation_subjects: 4
 datagen_config:
   combinate_subjects: True
   channel_iters: 300
   target_codification:
     positive: 1
     negative: 0
-  #dataset: "same_channel_single_channel"
+  dataset: "same_channel_single_channel"
   #dataset: "same_subject_single_channel"
   #dataset: "consecutive_single_channel"
   #dataset: "temporal_shifting_multiple_channel"
-  dataset: "relative_positioning_multiple_channel"
-  dataset_train_len: 700000
-  dataset_test_len: 200000
-  dataset_validation_len: 100000
+  #dataset: "relative_positioning_multiple_channel"
+  dataset_train_len: 7000000
+  dataset_test_len: 2000000
+  dataset_validation_len: 1000000
   # Multiple Channel Config
   multiple_channel:
     # Number of multiple channels
@@ -33,16 +33,18 @@ datagen_config:
   subjects_overfitting: 2
   train_dataset_len: 50
 dataset_batch:
-  train_batch_size: 80
-  validation_batch_size: 80
-  test_batch_size: 80
+  train_batch_size: 512
+  validation_batch_size: 512
+  test_batch_size: 512
+  grad_accum: 8
 model:
   folder_save: "models"
   extention: "pt"
   #model_config_path: "config/models/linear.yaml"
-  #model_config_path: "config/models/conv1d.yaml"
-  model_config_path: "config/models/stagenet.yaml"
+  model_config_path: "config/models/conv1d.yaml"
+  #model_config_path: "config/models/stagenet.yaml"
   #model_config_path: "config/models/nedbert.yaml"
+  #model_config_path: "config/models/coatnet.yaml"
 loss:
   #loss_function: "contrastive_loss_custom"
   loss_function: "contrastive_loss"
@@ -53,14 +55,24 @@ loss:
   margin: 2.8793557936105363
 optimizer: 
   name: "adam"
-  learning_rate: 0.05454351852596594
+  learning_rate: 0.005454351852596594
   w_decay: 0.0001
   momentum: 0.9
+  scheduler_step: 25
+  gamma: 0.1
+ddp:
+  seed: 2022
+  nodes: 1
+  rank: 0
+  n_gpus: 1
+  ip: "192.168.100.2"
+  master_port: '8888'
+  backend: 'gloo'
 train:
   load_model: False
   #load_model_name: "last"
   load_model_name: "optuna/optuna_conv1d_179.pt"
-  epochs: 25
+  epochs: 100
   save_each: "epoch"
   #save_each: "100-iter"
 validation:

@@ -1,58 +1,73 @@
 name: "siamese_conv"
 layers:
   conv1d1:
-    channels_out: 16
+    channels_out: 32
     kernel: 8
     stride: 1
     maxpool:
       kernel: 5
-      stride: 2
-    act_fn: "relu"
+      stride: 1
+    act_fn: "gelu"
     #act_fn: "relu"
     dropout: 0.2
     batch_normalization: True
   conv1d2:
-    channels_out: 64
+    channels_out: 128
     kernel: 16
     stride: 1
     maxpool:
       kernel: 5
-      stride: 1
-    act_fn: "relu"
+      stride: 2
+    act_fn: "gelu"
     dropout: 0.2
     batch_normalization: True
   conv1d3:
+    channels_out: 1024
+    kernel: 8
+    stride: 1
+    maxpool:
+      kernel: 8
+      stride: 2
+    act_fn: "gelu"
+    dropout: 0.2
+    batch_normalization: True
+  conv1d4:
+    channels_out: 512
+    kernel: 8
+    stride: 1
+    maxpool:
+      kernel: 8
+      stride: 2
+    act_fn: "gelu"
+    dropout: 0.2
+    batch_normalization: True
+  conv1d5:
+    channels_out: 256
+    kernel: 8
+    stride: 1
+    maxpool:
+      kernel: 8
+      stride: 2
+    act_fn: "gelu"
+    dropout: 0.2
+    batch_normalization: True
+  conv1d6:
     channels_out: 128
     kernel: 8
     stride: 1
     maxpool:
       kernel: 8
       stride: 2
-    act_fn: "relu"
-    dropout: 0.2
-    batch_normalization: True
-  conv1d4:
-    channels_out: 64
-    kernel: 8
-    stride: 1
-    maxpool:
-      kernel: 8
-      stride: 1
-    act_fn: "relu"
-    dropout: 0.2
-    batch_normalization: True
-  conv1d5:
-    channels_out: 16
-    kernel: 8
-    stride: 1
-    maxpool:
-      kernel: 8
-      stride: 2
-    act_fn: "relu"
+    act_fn: "gelu"
     dropout: 0.2
     batch_normalization: True
   linear1:
+    output_dim: 1024
+    act_fn: "gelu"
+    dropout: 0.8
+    batch_normalization: True
+  linear2:
     output_dim: 256
-    act_fn: "relu"
-    dropout: 0.2
+    act_fn: "none"
+    dropout: 0.0
     batch_normalization: True
