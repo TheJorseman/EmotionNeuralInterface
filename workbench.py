@@ -102,7 +102,7 @@ class Workbench(object):
         print("Init Process Group")
         self.world_size = self.ddp_data['n_gpus'] * self.ddp_data['nodes']
         dist.init_process_group(
-            backend='gloo',
+            backend=self.ddp_data['backend'],
             init_method='env://',
             world_size=self.world_size,
             rank=self.ddp_data['rank']

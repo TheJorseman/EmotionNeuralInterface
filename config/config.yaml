@@ -33,10 +33,10 @@ datagen_config:
   subjects_overfitting: 2
   train_dataset_len: 50
 dataset_batch:
-  train_batch_size: 512
-  validation_batch_size: 512
-  test_batch_size: 512
-  grad_accum: 8
+  train_batch_size: 256
+  validation_batch_size: 256
+  test_batch_size: 256
+  grad_accum: 16
 model:
   folder_save: "models"
   extention: "pt"
@@ -62,7 +62,7 @@ optimizer:
   gamma: 0.1
 ddp:
   seed: 2022
-  nodes: 1
+  nodes: 2
   rank: 0
   n_gpus: 1
   ip: "192.168.100.2"

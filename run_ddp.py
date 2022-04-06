@@ -19,11 +19,11 @@ if __name__ == '__main__':
     data = {}
     with open(args.config_yaml) as f:
         data = yaml.load(f, Loader=yaml.FullLoader)
-    args.world_size = args.ngpus * args.nodes
+    data = data['ddp']
+    args.world_size = data['n_gpus'] * data['nodes']
     #if args.iface == 'auto':
     #    iface = list(filter(lambda x: 'en' in x, psutil.net_if_addrs().keys()))[0]
     #os.environ['GLOO_SOCKET_IFNAME'] = iface
-    data = data['ddp']
     os.environ['MASTER_ADDR'] = data['ip']
     print("ip_adress is", data['ip'])
     os.environ['MASTER_PORT'] = data['master_port']
