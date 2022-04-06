@@ -14,7 +14,7 @@ class NetworkDataSet(Dataset):
     data = self.data[i]
     if type(data.get("input1", False)) == type(list()):
       return self.handle_multiple_channel(data)
-    elif type(data.get("input1", False)) == type(str()):
+    elif type(data.get("input1", False)) == type(int()):
       return self.handle_single_channel(data)
     else:
       return self.handle_finetuning(data)

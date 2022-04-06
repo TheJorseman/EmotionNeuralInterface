@@ -14,7 +14,7 @@ class Data(object):
     self.csv = read_csv(path)
     self.experiment = experiment
     self.header = read_csv(path,nrows=0)
-    self.data = read_csv(path, header=None,skiprows=1)
+    self.data = read_csv(path, header=None, skiprows=1)
     self.__set_data__()
     self.experiment_time = experiments_time
     self.set_markers()

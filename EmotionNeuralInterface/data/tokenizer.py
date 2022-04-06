@@ -24,8 +24,8 @@ class Tokenizer(object):
         patience (int, optional): Define cuantos intentos no exitosos se permiten hasta parar la generacion del dataset. Defaults to 10.
     """
     self.subjects = subjects
-    self.window_size = window_size
-    self.stride = stride
+    self.window_size = int(window_size)
+    self.stride = int(stride)
     self.pad_array = pad_array
     if isinstance(channels,list):
       self.channels = channels

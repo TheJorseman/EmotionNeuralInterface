@@ -75,6 +75,8 @@ class FullyConected(nn.Module):
             return nn.Sigmoid()
         elif value == "softmax":
             return nn.Softmax(dim=1)
+        elif value == "none":
+            return nn.Identity()
         raise Warning("No supported activation function")
 
     def forward(self, x):
