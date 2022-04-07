@@ -88,6 +88,7 @@ class Workbench(object):
         self.model_config = {}
         if self.ddp:
             self.ddp_data = self.data["ddp"]
+            self.set_ddp_config()
         self.load_dataset()
         self.load_tokenizer()
         self.dataset_subjects()
