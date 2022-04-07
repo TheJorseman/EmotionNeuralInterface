@@ -10,7 +10,7 @@ def arg_parser():
     parser.add_argument('--config_yaml', default="config/config.yaml", type=str)
     return parser.parse_args()
 
-def train(args):
+def train(gpu, args):
     exp = Workbench(args.config_yaml, ddp=True)
     exp.run()
 
@@ -29,5 +29,5 @@ if __name__ == '__main__':
     os.environ['MASTER_PORT'] = data['master_port']
     os.environ['WORLD_SIZE'] = str(args.world_size)
     # nprocs: number of process which is equal to args.ngpu here
-    mp.spawn(train, nprocs=args.ngpus, args=(args,), join=True)
+    mp.spawn(train, nprocs=data['n_gpus'], args=(args,))
     
