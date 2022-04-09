@@ -1,4 +1,5 @@
 from math import gamma
+from sre_parse import State
 from EmotionNeuralInterface.tools.paths_utils import get_paths_experiment, get_path
 from EmotionNeuralInterface.subject_data.utils import create_subject_data
 from EmotionNeuralInterface.data.tokenizer import Tokenizer
@@ -281,7 +282,10 @@ class Workbench(object):
     def get_model(self):
         model = None
         if self.data["train"]["load_model"]:
-            model = torch.load(self.get_model_path(self.data["train"]["load_model_name"]))
+            model = self.get_type_model()
+            state_dict = torch.load(self.get_model_path(self.data["train"]["load_model_name"]), map_location=self.device)
+            model.load_state_dict(state_dict)
+            #model = torch.load(self.get_model_path(self.data["train"]["load_model_name"]))
         else:
             model = self.get_type_model()
         if self.ddp:
@@ -372,8 +376,8 @@ class Workbench(object):
             #distance = self.calculate_distance(output1, output2)
             n_correct += self.calcuate_metric(output1, output2, target)
             examples += target.size(0)
-            if n % 50000 == 0:
-                break
+            #if n % 50000 == 0:
+            #   break
             n += 1
         accuracy = n_correct/examples
         self.dA_eval = accuracy - self.dA_eval
@@ -474,15 +478,15 @@ class Workbench(object):
         torch.cuda.empty_cache()
         for epoch in range(self.EPOCHS):
             self.model_train(epoch)
-            if self.data["train"]["save_each"] == "epoch":
+            if epoch % self.data["train"]["save_each"] == 0:
                 if self.save:
-                    torch.save(self.model, "{}/{}-epoch-{}.{}".format(self.folder, self.model_name, epoch, self.ext))
+                    torch.save(self.model.state_dict(), "{}/{}-epoch-{}.{}".format(self.folder, self.model_name, epoch, self.ext))
                     print("Model Saved Successfully")
-            if self.data["validation"]["use_each"] == "epoch":
+            if epoch % self.data["validation"]["use_each"] == 0:
                 torch.cuda.empty_cache()
                 self.evaluate_model(epoch)
         if self.save:
-            torch.save(self.model, self.full_path)
+            torch.save(self.model.state_dict(), self.full_path)
 
     def get_real_label(self, targets):
         if len(targets.shape) == 1:

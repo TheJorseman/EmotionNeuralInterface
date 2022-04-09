@@ -34,7 +34,7 @@ def get_path(data_str):
     return download_gdrive_data(data_str)
   return data_str
 
-def download_gdrive_data(url, default_data_folder="./data"):
+def download_gdrive_data(url, default_data_folder="./dataset"):
   if data_exist(default_data_folder):
     return default_data_folder
   os.mkdir(default_data_folder)

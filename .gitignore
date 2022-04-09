@@ -7,10 +7,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 # Custom
-data/
+dataset
 .sqbpro
 .csv
-optuna/
+optuna
 
 # C extensions
 *.so
@@ -158,13 +158,13 @@ dmypy.json
 .ionide
 
 # Models
-/models
-/runs
-/plots
-/runs.bk
-/runscnn
-/sketches
-/Tiny Runs
+models
+runs
+plots
+runs.bk
+runscnn
+sketches
+Tiny Runs
 *.sql
 *.sqbpro
 *.csv

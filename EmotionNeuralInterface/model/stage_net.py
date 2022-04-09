@@ -2,6 +2,8 @@ import torch.nn as nn
 from .encoder import CNN2D
 from torch import transpose, flatten
 from numpy import prod
+from torch.nn.functional import normalize
+
 
 class StageNet(nn.Module):
     def __init__(self, value_dict, channels_in=1, height=14, width=512):
@@ -52,6 +54,7 @@ class FullyConected(nn.Module):
         self.act_fn = self.get_activation_fn(config["act_fn"])
         self.batch_normalization = nn.BatchNorm1d(config["output_dim"])
         self.norm = bool(config["batch_normalization"])
+        self._l2_norm = bool(config.get("output_norm", False))
         self.dropout = nn.Dropout(p=config["dropout"])
 
     def calculate_output_shape(self):
@@ -60,6 +63,11 @@ class FullyConected(nn.Module):
     def normalization(self, x):
         if self.norm:
             return self.batch_normalization(x)
+        return x
+
+    def l2_norm(self, x):
+        if self._l2_norm:
+            return normalize(x, p=2, dim=-1)
         return x
 
     def get_activation_fn(self, value):
@@ -84,6 +92,7 @@ class FullyConected(nn.Module):
         output = self.linear(output)
         output = self.act_fn(output)
         output = self.normalization(output)
+        output = self.l2_norm(output)
         return self.dropout(output)
 
 
